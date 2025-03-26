@@ -3,12 +3,18 @@
 import { supabase } from '@/lib/supabase'
 import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
+
+interface Category {
+  id: string
+  name: string
+}
 
 export default function NewMenuItemPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -17,6 +23,28 @@ export default function NewMenuItemPage() {
     image_url: '',
     is_available: true,
   })
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('id, name')
+          .order('name')
+
+        if (error) throw error
+        setCategories(data || [])
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error('Error fetching categories:', error.message)
+        } else {
+          console.error('Error fetching categories:', error)
+        }
+      }
+    }
+
+    fetchCategories()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -137,10 +165,11 @@ export default function NewMenuItemPage() {
                 className="w-full px-4 py-2 rounded-lg border border-[#EECAD5] focus:outline-none focus:ring-2 focus:ring-[#F1D3CE] font-inter text-sm text-[#2C3E50]"
               >
                 <option value="">Select a category</option>
-                <option value="1">Appetizers</option>
-                <option value="2">Main Courses</option>
-                <option value="3">Desserts</option>
-                <option value="4">Beverages</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
               </select>
             </div>
 
