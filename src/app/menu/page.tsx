@@ -157,10 +157,6 @@ export default function MenuPage() {
     setSelectedItem(null)
   }
 
-  const handleError = (error: Error) => {
-    console.error('Error:', error.message)
-  }
-
   return (
     <div className="min-h-screen bg-[#D1E9F6]">
       {/* Header */}

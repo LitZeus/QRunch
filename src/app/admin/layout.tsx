@@ -41,11 +41,6 @@ export default function AdminLayout({
     }
   }
 
-  const handleError = (error: Error) => {
-    console.error('Error:', error.message)
-    // ... rest of the code ...
-  }
-
   // Close sidebar when route changes on mobile
   useEffect(() => {
     setIsSidebarOpen(false)
