@@ -138,12 +138,6 @@ export default function MenuPage() {
     }
   }
 
-  // Handle image error
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement
-    target.src = '/placeholder.jpg'
-  }
-
   // Handle drawer open/close
   const handleItemClick = (item: MenuItem) => {
     setSelectedItem(item)
@@ -153,6 +147,10 @@ export default function MenuPage() {
   const handleCloseDrawer = () => {
     setIsDrawerOpen(false)
     setSelectedItem(null)
+  }
+
+  const handleError = (error: Error) => {
+    console.error('Error:', error.message)
   }
 
   return (

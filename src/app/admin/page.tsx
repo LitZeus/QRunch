@@ -12,7 +12,7 @@ export default function AdminDashboard() {
           Welcome to The Grand Plate
         </h1>
         <p className="text-[#2C3E50]/80 font-inter">
-          Manage your cafe's menu, categories, and table QR codes from this dashboard.
+          Welcome to your cafe&apos;s admin dashboard
         </p>
       </div>
 
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
             Menu Items
           </h3>
           <p className="text-sm text-[#2C3E50]/80 font-inter">
-            Add, edit, or remove items from your menu
+            Manage your cafe&apos;s menu items
           </p>
         </Link>
 
@@ -68,7 +68,7 @@ export default function AdminDashboard() {
             Table QR Codes
           </h3>
           <p className="text-sm text-[#2C3E50]/80 font-inter">
-            Generate and manage table QR codes
+            Generate QR codes for your cafe&apos;s tables
           </p>
         </Link>
 

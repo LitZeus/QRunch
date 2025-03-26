@@ -2,6 +2,7 @@
 
 import { TableQR, supabase } from '@/lib/supabase'
 import { Edit, Plus, QrCode, Search, Trash2 } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
@@ -136,10 +137,12 @@ export default function TableQRsPage() {
             </div>
             {qr.qr_code_url && (
               <div className="mt-4 flex justify-center">
-                <img
+                <Image
                   src={qr.qr_code_url}
-                  alt={`QR Code for Table ${qr.table_number}`}
-                  className="w-32 h-32 object-contain"
+                  alt={`Table ${qr.table_number} QR Code`}
+                  width={200}
+                  height={200}
+                  className="rounded-lg"
                 />
               </div>
             )}

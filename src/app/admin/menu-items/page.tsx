@@ -2,6 +2,7 @@
 
 import { MenuItem, supabase } from '@/lib/supabase'
 import { Edit, Filter, Image as ImageIcon, Plus, Search, Star, Trash2 } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
@@ -76,7 +77,7 @@ export default function MenuItemsPage() {
             Menu Items
           </h1>
           <p className="text-[#2C3E50]/80 font-inter">
-            Manage your cafe's menu items and their details
+            Manage your cafe&apos;s menu items and their details
           </p>
         </div>
         <Link
@@ -122,10 +123,12 @@ export default function MenuItemsPage() {
           >
             {item.image_url ? (
               <div className="aspect-w-16 aspect-h-9 overflow-hidden">
-                <img
+                <Image
                   src={item.image_url}
                   alt={item.name}
-                  className="object-cover w-full h-48 group-hover:scale-105 transition-transform duration-300"
+                  width={100}
+                  height={100}
+                  className="rounded-lg object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
             ) : (
