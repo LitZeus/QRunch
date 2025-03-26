@@ -32,8 +32,12 @@ export default function AdminLayout({
       if (error) throw error
       router.replace('/login')
       toast.success('Logged out successfully!')
-    } catch (error: any) {
-      toast.error(error.message || 'Error logging out')
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message || 'Error logging out')
+      } else {
+        toast.error('Error logging out')
+      }
     }
   }
 

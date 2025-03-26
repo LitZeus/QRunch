@@ -126,8 +126,8 @@ export default function MenuItemsPage() {
                 <Image
                   src={item.image_url}
                   alt={item.name}
-                  width={100}
-                  height={100}
+                  width={400}
+                  height={225}
                   className="rounded-lg object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>

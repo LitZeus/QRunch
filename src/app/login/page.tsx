@@ -42,9 +42,14 @@ export default function LoginPage() {
       } else {
         throw new Error('No session data')
       }
-    } catch (error: Error) {
-      toast.error(error.message || 'Error logging in')
-      console.error('Error:', error.message)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message || 'Error logging in')
+        console.error('Error:', error.message)
+      } else {
+        toast.error('Error logging in')
+        console.error('Error:', error)
+      }
     } finally {
       setLoading(false)
     }

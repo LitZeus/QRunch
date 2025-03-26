@@ -119,7 +119,7 @@ export default function AdminDashboard() {
                 Organize Categories
               </h3>
               <p className="text-sm text-[#2C3E50]/80 font-inter">
-                Use clear and logical categories to help customers find what they're looking for easily.
+                Use clear and logical categories to help customers find what they&apos;re looking for easily.
               </p>
             </div>
           </div>
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
                 QR Code Management
               </h3>
               <p className="text-sm text-[#2C3E50]/80 font-inter">
-                Keep your table QR codes up to date and ensure they're properly assigned to tables.
+                Keep your table QR codes up to date and ensure they&apos;re properly assigned to tables.
               </p>
             </div>
           </div>

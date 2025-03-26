@@ -53,8 +53,12 @@ export default function MenuPage() {
 
         if (error) throw error
         setCategories(data || [])
-      } catch (error: any) {
-        console.error('Error fetching categories:', error.message)
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error('Error fetching categories:', error.message)
+        } else {
+          console.error('Error fetching categories:', error)
+        }
       }
     }
 
@@ -94,8 +98,12 @@ export default function MenuPage() {
         }
         setHasMore(data.length === itemsPerPage)
       }
-    } catch (error: any) {
-      console.error('Error fetching menu items:', error.message)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Error fetching menu items:', error.message)
+      } else {
+        console.error('Error fetching menu items:', error)
+      }
     } finally {
       setLoading(false)
       setLoadingMore(false)
