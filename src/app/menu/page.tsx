@@ -63,12 +63,8 @@ export default function Menu() {
 
         if (menuItemsError) throw menuItemsError
         setMenuItems(menuItemsData || [])
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          console.error('Error fetching data:', error.message)
-        } else {
-          console.error('Error fetching data:', error)
-        }
+      } catch (error) {
+        console.error('Error fetching data:', error instanceof Error ? error.message : String(error))
       } finally {
         setLoading(false)
       }

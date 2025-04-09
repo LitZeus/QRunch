@@ -5,7 +5,7 @@ import { Category } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { use, useEffect, useState } from 'react'
+import { use, useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
 interface PageParams {
@@ -22,11 +22,7 @@ export default function EditCategory({ params }: { params: Promise<PageParams> }
     description: ''
   })
 
-  useEffect(() => {
-    fetchCategory()
-  }, [resolvedParams.id])
-
-  const fetchCategory = async () => {
+  const fetchCategory = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('categories')
@@ -47,7 +43,11 @@ export default function EditCategory({ params }: { params: Promise<PageParams> }
     } finally {
       setLoading(false)
     }
-  }
+  }, [resolvedParams.id])
+
+  useEffect(() => {
+    fetchCategory()
+  }, [fetchCategory])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -165,4 +165,4 @@ export default function EditCategory({ params }: { params: Promise<PageParams> }
       </div>
     </div>
   )
-} 
+}
