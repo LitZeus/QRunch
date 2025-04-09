@@ -63,8 +63,8 @@ export default function Menu() {
 
         if (menuItemsError) throw menuItemsError
         setMenuItems(menuItemsData || [])
-      } catch (error) {
-        console.error('Error fetching data:', error instanceof Error ? error.message : String(error))
+      } catch (err) {
+        console.error('Error fetching data:', err instanceof Error ? err.message : String(err))
       } finally {
         setLoading(false)
       }
@@ -158,13 +158,13 @@ export default function Menu() {
         try {
           document.execCommand('copy')
           alert('Wishlist copied to clipboard!')
-        } catch (error) {
+        } catch (err) {
           alert(`My Verandah Wishlist:\n\n${wishlistText}\n\nYou can copy this text manually.`)
         }
         document.body.removeChild(textArea)
       }
-    } catch (error) {
-      console.error('Error sharing:', error)
+    } catch (err) {
+      console.error('Error sharing:', err)
       // If all methods fail, show the text in an alert
       alert(`My Verandah Wishlist:\n\n${wishlistText}\n\nYou can copy this text manually.`)
     }
