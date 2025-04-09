@@ -321,20 +321,22 @@ export default function Menu() {
                     </button>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as 'name' | 'price')}
-                        className="w-full sm:w-auto px-3 py-2 rounded-lg border border-[#E8D5B5] focus:outline-none focus:ring-2 focus:ring-[#4A6B57] focus:border-transparent text-sm text-[#4A6B57] bg-white"
-                      >
-                        <option value="name">Sort by Name</option>
-                        <option value="price">Sort by Price</option>
-                      </select>
-                      <button
-                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                        className="p-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors"
-                      >
-                        <ArrowUpDown className="w-4 h-4" />
-                      </button>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'name' | 'price')}
+                      className="px-3 py-2 rounded-lg border border-[#E8D5B5] bg-white text-[#4A6B57] focus:outline-none text-sm"
+                    >
+                      <option value="name">Sort by Name</option>
+                      <option value="price">Sort by Price</option>
+                    </select>
+
+                    <button
+                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                      className="p-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors"
+                      title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                    >
+                      <ArrowUpDown className="w-4 h-4" />
+                    </button>
                     </div>
                   </div>
                 </div>

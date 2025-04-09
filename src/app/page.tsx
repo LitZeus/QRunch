@@ -113,7 +113,7 @@ export default function Home() {
                   Nestled in the heart of the city, our restaurant offers a perfect blend of contemporary ambiance and timeless flavors. Our chefs craft each dish with passion, using the finest ingredients to create memorable dining experiences.
                 </p>
                 <p className="text-sm md:text-lg text-[#4A6B57]/90 font-inter leading-relaxed text-justify">
-                  At Verandah, we believe in creating moments that linger in your memory long after your visit. Whether it's a casual lunch, a romantic dinner, or a special celebration, we're here to make every occasion extraordinary.
+                  At Verandah, we believe in creating moments that linger in your memory long after your visit. Whether it&apos;s a casual lunch, a romantic dinner, or a special celebration, we&apos;re here to make every occasion extraordinary.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4 md:gap-6">

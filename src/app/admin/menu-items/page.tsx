@@ -111,7 +111,7 @@ export default function MenuItems() {
         <div>
           <h1 className="text-xl sm:text-2xl font-playfair font-bold text-[#4A6B57]">Menu Items</h1>
           <p className="mt-1 text-sm font-inter text-[#4A6B57]/70">
-            Manage your restaurant's menu items
+            Manage your restaurant&apos;s menu items
           </p>
         </div>
         <Link
@@ -234,4 +234,4 @@ export default function MenuItems() {
       </div>
     </div>
   )
-} 
+}
