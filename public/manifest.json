@@ -1,7 +1,7 @@
 {
-  "name": "The Grand Plate",
-  "short_name": "Grand Plate",
-  "description": "Digital menu and ordering system for The Grand Plate",
+  "name": "Verandah",
+  "short_name": "Verandah",
+  "description": "Digital menu for Verandah",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#D1E9F6",

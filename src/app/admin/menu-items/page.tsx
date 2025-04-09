@@ -1,27 +1,45 @@
 'use client'
 
-import { MenuItem, supabase } from '@/lib/supabase'
-import { Edit, Filter, Image as ImageIcon, Plus, Search, Star, Trash2 } from 'lucide-react'
-import Image from 'next/image'
+import { supabase } from '@/lib/supabase'
+import { Category, MenuItem } from '@/types'
+import { ChevronRight, Edit, Home, Plus, Search, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
-export default function MenuItemsPage() {
+export default function MenuItems() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [priceRange, setPriceRange] = useState('')
 
   useEffect(() => {
+    fetchCategories()
     fetchMenuItems()
   }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name')
+
+      if (error) throw error
+      setCategories(data || [])
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      toast.error('Failed to fetch categories')
+    }
+  }
 
   const fetchMenuItems = async () => {
     try {
       const { data, error } = await supabase
         .from('menu_items')
-        .select('*, category:categories(*)')
+        .select('*, categories(name)')
         .order('name')
 
       if (error) throw error
@@ -34,8 +52,8 @@ export default function MenuItemsPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return
+  const handleDeleteItem = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this menu item?')) return
 
     try {
       const { error } = await supabase
@@ -45,7 +63,7 @@ export default function MenuItemsPage() {
 
       if (error) throw error
 
-      setMenuItems(menuItems.filter((item) => item.id !== id))
+      setMenuItems(prev => prev.filter(item => item.id !== id))
       toast.success('Menu item deleted successfully')
     } catch (error) {
       console.error('Error deleting menu item:', error)
@@ -53,131 +71,167 @@ export default function MenuItemsPage() {
     }
   }
 
-  const filteredItems = menuItems.filter((item) => {
+  const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase())
+      item.categories?.name.toLowerCase().includes(searchQuery.toLowerCase())
+    
     const matchesCategory = !selectedCategory || item.category_id === selectedCategory
-    return matchesSearch && matchesCategory
+    
+    const matchesPrice = !priceRange || (
+      priceRange === 'low' && item.price < 200 ||
+      priceRange === 'medium' && item.price >= 200 && item.price < 500 ||
+      priceRange === 'high' && item.price >= 500
+    )
+
+    return matchesSearch && matchesCategory && matchesPrice
   })
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#4A6B57]"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center gap-2 text-sm font-inter text-[#4A6B57]">
+        <Link href="/admin" className="flex items-center gap-1 hover:text-[#4A6B57]/80">
+          <Home className="w-4 h-4" />
+          <span>Dashboard</span>
+        </Link>
+        <ChevronRight className="w-4 h-4" />
+        <span className="text-[#4A6B57]/70">Menu Items</span>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-playfair font-bold text-[#2C3E50] mb-1">
-            Menu Items
-          </h1>
-          <p className="text-[#2C3E50]/80 font-inter">
-            Manage your cafe&apos;s menu items and their details
+          <h1 className="text-xl sm:text-2xl font-playfair font-bold text-[#4A6B57]">Menu Items</h1>
+          <p className="mt-1 text-sm font-inter text-[#4A6B57]/70">
+            Manage your restaurant's menu items
           </p>
         </div>
         <Link
           href="/admin/menu-items/new"
-          className="inline-flex items-center px-4 py-2 bg-[#F6EACB] text-[#2C3E50] rounded-lg hover:bg-[#F1D3CE] transition-colors duration-300 font-inter"
+          className="flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-inter text-white bg-[#4A6B57] rounded-lg hover:bg-[#4A6B57]/90 transition-colors"
         >
-          <Plus className="w-5 h-5 mr-2" />
-          Add New Item
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">Add New Item</span>
+          <span className="sm:hidden">Add</span>
         </Link>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#F1D3CE]" />
-          <input
-            type="text"
-            placeholder="Search menu items..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-[#EECAD5] text-[#2C3E50] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F1D3CE] focus:border-transparent placeholder-[#F1D3CE] font-inter"
-          />
-        </div>
-        <button
-          onClick={() => setSelectedCategory(null)}
-          className={`inline-flex items-center px-4 py-2.5 text-sm rounded-lg font-inter ${
-            !selectedCategory
-              ? 'bg-[#F6EACB] text-[#2C3E50]'
-              : 'bg-white border border-[#EECAD5] text-[#2C3E50] hover:bg-[#F6EACB]/50'
-          }`}
-        >
-          <Filter className="w-4 h-4 mr-2" />
-          All Categories
-        </button>
-      </div>
-
-      {/* Menu Items Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map((item) => (
-          <div
-            key={item.id}
-            className="bg-white rounded-xl shadow-lg overflow-hidden border border-[#EECAD5] group"
-          >
-            {item.image_url ? (
-              <div className="aspect-w-16 aspect-h-9 overflow-hidden">
-                <Image
-                  src={item.image_url}
-                  alt={item.name}
-                  width={400}
-                  height={225}
-                  className="rounded-lg object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-            ) : (
-              <div className="aspect-w-16 aspect-h-9 bg-[#F6EACB] flex items-center justify-center">
-                <ImageIcon className="w-12 h-12 text-[#2C3E50]/40" />
-              </div>
-            )}
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-lg font-playfair font-semibold text-[#2C3E50]">
-                  {item.name}
-                </h3>
-                <p className="text-lg font-playfair font-bold text-[#F1D3CE]">
-                  ${item.price.toFixed(2)}
-                </p>
-              </div>
-              <p className="text-sm text-[#2C3E50]/80 line-clamp-2 mb-4 font-inter">
-                {item.description}
-              </p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-xs text-[#F1D3CE] font-inter">
-                  <Star className="w-3 h-3 mr-1" />
-                  <span>{item.category?.name || 'Uncategorized'}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Link
-                    href={`/admin/menu-items/${item.id}/edit`}
-                    className="p-2 text-[#2C3E50] hover:bg-[#F6EACB] rounded-lg transition-colors duration-300"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="p-2 text-[#2C3E50] hover:bg-[#F6EACB] rounded-lg transition-colors duration-300"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#E8D5B5] p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#4A6B57]/50" />
+            <input
+              type="text"
+              placeholder="Search menu items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
+            />
           </div>
-        ))}
+
+          {/* Category Filter */}
+          <div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
+            >
+              <option value="">All Categories</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Price Range Filter */}
+          <div>
+            <select
+              value={priceRange}
+              onChange={(e) => setPriceRange(e.target.value)}
+              className="w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
+            >
+              <option value="">All Prices</option>
+              <option value="low">Under ₹200</option>
+              <option value="medium">₹200 - ₹500</option>
+              <option value="high">Over ₹500</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      {filteredItems.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-[#2C3E50] font-inter">No menu items found matching your search.</p>
+      {/* Menu Items List */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#E8D5B5] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[#F5F5F5]">
+                <th className="px-3 sm:px-4 py-2 text-left text-xs font-inter font-medium text-[#4A6B57] uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-3 sm:px-4 py-2 text-left text-xs font-inter font-medium text-[#4A6B57] uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-3 sm:px-4 py-2 text-left text-xs font-inter font-medium text-[#4A6B57] uppercase tracking-wider">
+                  Price
+                </th>
+                <th className="px-3 sm:px-4 py-2 text-right text-xs font-inter font-medium text-[#4A6B57] uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E8D5B5]">
+              {filteredItems.map((item) => (
+                <tr key={item.id} className="hover:bg-[#F5F5F5]">
+                  <td className="px-3 sm:px-4 py-2">
+                    <div className="text-sm font-medium text-[#4A6B57]">{item.name}</div>
+                    {item.description && (
+                      <div className="text-xs text-[#4A6B57]/70 line-clamp-1">{item.description}</div>
+                    )}
+                  </td>
+                  <td className="px-3 sm:px-4 py-2">
+                    <div className="text-sm text-[#4A6B57]">
+                      {item.categories?.name || 'Uncategorized'}
+                    </div>
+                  </td>
+                  <td className="px-3 sm:px-4 py-2">
+                    <div className="text-sm text-[#4A6B57]">₹{item.price}</div>
+                  </td>
+                  <td className="px-3 sm:px-4 py-2 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link
+                        href={`/admin/menu-items/${item.id}/edit`}
+                        className="p-1.5 rounded-lg hover:bg-[#F0E6D2] transition-colors"
+                        title="Edit"
+                      >
+                        <Edit className="w-4 h-4 text-[#4A6B57]" />
+                      </Link>
+                      <button
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="p-1.5 rounded-lg hover:bg-[#F0E6D2] transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4 text-[#4A6B57]" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   )
 } 

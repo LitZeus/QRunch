@@ -1,141 +1,205 @@
 'use client'
 
-import { Coffee, Folder, Menu, Plus, Table } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { Category, MenuItem } from '@/types'
+import { Edit, FolderPlus, Plus, Trash2, Utensils } from 'lucide-react'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { toast } from 'react-hot-toast'
 
 export default function AdminDashboard() {
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      const [menuItemsResponse, categoriesResponse] = await Promise.all([
+        supabase.from('menu_items').select('*').order('name'),
+        supabase.from('categories').select('*').order('name')
+      ])
+
+      if (menuItemsResponse.error) throw menuItemsResponse.error
+      if (categoriesResponse.error) throw categoriesResponse.error
+
+      setMenuItems(menuItemsResponse.data || [])
+      setCategories(categoriesResponse.data || [])
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      toast.error('Failed to fetch data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#4A6B57]"></div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-[#EECAD5]">
-        <h1 className="text-2xl font-playfair font-bold text-[#2C3E50] mb-2">
-          Welcome to The Grand Plate
-        </h1>
-        <p className="text-[#2C3E50]/80 font-inter">
-          Welcome to your cafe&apos;s admin dashboard
-        </p>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Link
-          href="/admin/menu-items"
-          className="bg-white rounded-xl shadow-lg p-6 border border-[#EECAD5] hover:shadow-[#EECAD5]/50 transition-all duration-300 group"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-lg bg-[#F6EACB] group-hover:bg-[#F1D3CE] transition-colors duration-300">
-              <Menu className="w-6 h-6 text-[#2C3E50]" />
+    <div className="space-y-8">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-[#E8D5B5] p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-playfair font-bold text-[#4A6B57]">Menu Items</h3>
+              <p className="mt-1 text-3xl font-bold text-[#4A6B57]">{menuItems.length}</p>
             </div>
-            <Plus className="w-5 h-5 text-[#F1D3CE]" />
-          </div>
-          <h3 className="text-lg font-playfair font-semibold text-[#2C3E50] mb-2">
-            Menu Items
-          </h3>
-          <p className="text-sm text-[#2C3E50]/80 font-inter">
-            Manage your cafe&apos;s menu items
-          </p>
-        </Link>
-
-        <Link
-          href="/admin/categories"
-          className="bg-white rounded-xl shadow-lg p-6 border border-[#EECAD5] hover:shadow-[#EECAD5]/50 transition-all duration-300 group"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-lg bg-[#F6EACB] group-hover:bg-[#F1D3CE] transition-colors duration-300">
-              <Folder className="w-6 h-6 text-[#2C3E50]" />
+            <div className="p-3 bg-[#F0E6D2] rounded-lg">
+              <Utensils className="w-6 h-6 text-[#4A6B57]" />
             </div>
-            <Plus className="w-5 h-5 text-[#F1D3CE]" />
           </div>
-          <h3 className="text-lg font-playfair font-semibold text-[#2C3E50] mb-2">
-            Categories
-          </h3>
-          <p className="text-sm text-[#2C3E50]/80 font-inter">
-            Organize your menu items into categories
-          </p>
-        </Link>
-
-        <Link
-          href="/admin/table-qrs"
-          className="bg-white rounded-xl shadow-lg p-6 border border-[#EECAD5] hover:shadow-[#EECAD5]/50 transition-all duration-300 group"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-lg bg-[#F6EACB] group-hover:bg-[#F1D3CE] transition-colors duration-300">
-              <Table className="w-6 h-6 text-[#2C3E50]" />
-            </div>
-            <Plus className="w-5 h-5 text-[#F1D3CE]" />
-          </div>
-          <h3 className="text-lg font-playfair font-semibold text-[#2C3E50] mb-2">
-            Table QR Codes
-          </h3>
-          <p className="text-sm text-[#2C3E50]/80 font-inter">
-            Generate QR codes for your cafe&apos;s tables
-          </p>
-        </Link>
-
-        <Link
-          href="/admin/menu-items/new"
-          className="bg-white rounded-xl shadow-lg p-6 border border-[#EECAD5] hover:shadow-[#EECAD5]/50 transition-all duration-300 group"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-lg bg-[#F6EACB] group-hover:bg-[#F1D3CE] transition-colors duration-300">
-              <Plus className="w-6 h-6 text-[#2C3E50]" />
-            </div>
-            <Coffee className="w-5 h-5 text-[#F1D3CE]" />
-          </div>
-          <h3 className="text-lg font-playfair font-semibold text-[#2C3E50] mb-2">
+          <Link
+            href="/admin/menu-items"
+            className="mt-4 inline-flex items-center gap-2 text-sm font-inter text-[#4A6B57] hover:text-[#4A6B57]/80"
+          >
+            <Plus className="w-4 h-4" />
             Add New Item
-          </h3>
-          <p className="text-sm text-[#2C3E50]/80 font-inter">
-            Create a new menu item quickly
-          </p>
-        </Link>
+          </Link>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-[#E8D5B5] p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-playfair font-bold text-[#4A6B57]">Categories</h3>
+              <p className="mt-1 text-3xl font-bold text-[#4A6B57]">{categories.length}</p>
+            </div>
+            <div className="p-3 bg-[#F0E6D2] rounded-lg">
+              <FolderPlus className="w-6 h-6 text-[#4A6B57]" />
+            </div>
+          </div>
+          <Link
+            href="/admin/categories"
+            className="mt-4 inline-flex items-center gap-2 text-sm font-inter text-[#4A6B57] hover:text-[#4A6B57]/80"
+          >
+            <Plus className="w-4 h-4" />
+            Add New Category
+          </Link>
+        </div>
       </div>
 
-      {/* Quick Tips */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-[#EECAD5]">
-        <h2 className="text-xl font-playfair font-bold text-[#2C3E50] mb-4">
-          Quick Tips
-        </h2>
-        <div className="space-y-4">
-          <div className="flex items-start">
-            <div className="p-2 rounded-lg bg-[#F6EACB] mr-3">
-              <Coffee className="w-5 h-5 text-[#2C3E50]" />
-            </div>
-            <div>
-              <h3 className="text-sm font-playfair font-semibold text-[#2C3E50] mb-1">
-                Keep Menu Fresh
-              </h3>
-              <p className="text-sm text-[#2C3E50]/80 font-inter">
-                Regularly update your menu items and prices to keep your offerings current and competitive.
-              </p>
-            </div>
+      {/* Recent Menu Items */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#E8D5B5]">
+        <div className="p-6 border-b border-[#E8D5B5]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-playfair font-bold text-[#4A6B57]">Recent Menu Items</h2>
+            <Link
+              href="/admin/menu-items"
+              className="text-sm font-inter text-[#4A6B57] hover:text-[#4A6B57]/80"
+            >
+              View All
+            </Link>
           </div>
-          <div className="flex items-start">
-            <div className="p-2 rounded-lg bg-[#F6EACB] mr-3">
-              <Menu className="w-5 h-5 text-[#2C3E50]" />
+        </div>
+        <div className="divide-y divide-[#E8D5B5]">
+          {menuItems.slice(0, 5).map((item) => (
+            <div key={item.id} className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-inter font-medium text-[#4A6B57]">{item.name}</h3>
+                  <p className="mt-1 text-sm text-[#4A6B57]/70">{item.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/admin/menu-items/${item.id}/edit`}
+                    className="p-2 text-[#4A6B57] hover:bg-[#F0E6D2] rounded-lg transition-colors"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to delete this item?')) {
+                        try {
+                          const { error } = await supabase
+                            .from('menu_items')
+                            .delete()
+                            .eq('id', item.id)
+
+                          if (error) throw error
+
+                          toast.success('Menu item deleted successfully')
+                          fetchData()
+                        } catch (error) {
+                          console.error('Error deleting menu item:', error)
+                          toast.error('Failed to delete menu item')
+                        }
+                      }
+                    }}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-playfair font-semibold text-[#2C3E50] mb-1">
-                Organize Categories
-              </h3>
-              <p className="text-sm text-[#2C3E50]/80 font-inter">
-                Use clear and logical categories to help customers find what they&apos;re looking for easily.
-              </p>
-            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#E8D5B5]">
+        <div className="p-6 border-b border-[#E8D5B5]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-playfair font-bold text-[#4A6B57]">Categories</h2>
+            <Link
+              href="/admin/categories"
+              className="text-sm font-inter text-[#4A6B57] hover:text-[#4A6B57]/80"
+            >
+              View All
+            </Link>
           </div>
-          <div className="flex items-start">
-            <div className="p-2 rounded-lg bg-[#F6EACB] mr-3">
-              <Table className="w-5 h-5 text-[#2C3E50]" />
+        </div>
+        <div className="divide-y divide-[#E8D5B5]">
+          {categories.map((category) => (
+            <div key={category.id} className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-inter font-medium text-[#4A6B57]">{category.name}</h3>
+                  <p className="mt-1 text-sm text-[#4A6B57]/70">{category.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/admin/categories/${category.id}/edit`}
+                    className="p-2 text-[#4A6B57] hover:bg-[#F0E6D2] rounded-lg transition-colors"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to delete this category?')) {
+                        try {
+                          const { error } = await supabase
+                            .from('categories')
+                            .delete()
+                            .eq('id', category.id)
+
+                          if (error) throw error
+
+                          toast.success('Category deleted successfully')
+                          fetchData()
+                        } catch (error) {
+                          console.error('Error deleting category:', error)
+                          toast.error('Failed to delete category')
+                        }
+                      }
+                    }}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-playfair font-semibold text-[#2C3E50] mb-1">
-                QR Code Management
-              </h3>
-              <p className="text-sm text-[#2C3E50]/80 font-inter">
-                Keep your table QR codes up to date and ensure they&apos;re properly assigned to tables.
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>

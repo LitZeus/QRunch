@@ -1,27 +1,15 @@
 'use client'
 
 import { supabase } from '@/lib/supabase'
-import { Coffee } from 'lucide-react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { toast } from 'react-hot-toast'
 
-function LoginForm() {
+export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const searchParams = useSearchParams()
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        router.replace('/admin')
-      }
-    }
-    checkSession()
-  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,60 +23,54 @@ function LoginForm() {
 
       if (error) throw error
 
-      const redirectTo = searchParams.get('redirectTo') || '/admin'
-      router.replace(redirectTo)
-      toast.success('Logged in successfully!')
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        toast.error(error.message || 'Error logging in')
-        console.error('Error:', error.message)
-      } else {
-        toast.error('Error logging in')
-        console.error('Error:', error)
-      }
+      toast.success('Logged in successfully')
+      router.push('/admin')
+    } catch (error) {
+      console.error('Error logging in:', error)
+      toast.error('Invalid email or password')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#D1E9F6] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <div className="flex items-center justify-center mb-8">
-            <Coffee className="w-12 h-12 text-[#F1D3CE]" />
-            <span className="ml-3 text-2xl font-playfair font-bold text-[#2C3E50]">
-              Admin Login
-            </span>
-          </div>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-playfair font-bold text-[#4A6B57]">Verandah</h1>
+          <p className="mt-2 text-sm font-inter text-[#4A6B57]/70">
+            Admin Panel Login
+          </p>
+        </div>
 
+        <div className="bg-white rounded-xl shadow-sm border border-[#E8D5B5] p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-inter text-[#2C3E50] mb-2">
+              <label htmlFor="email" className="block text-sm font-inter font-medium text-[#4A6B57]">
                 Email
               </label>
               <input
-                id="email"
                 type="email"
+                id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-2 rounded-lg border border-[#EECAD5] focus:outline-none focus:ring-2 focus:ring-[#F1D3CE] font-inter text-sm text-[#2C3E50]"
+                className="mt-1 block w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
                 placeholder="Enter your email"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-inter text-[#2C3E50] mb-2">
+              <label htmlFor="password" className="block text-sm font-inter font-medium text-[#4A6B57]">
                 Password
               </label>
               <input
-                id="password"
                 type="password"
+                id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-2 rounded-lg border border-[#EECAD5] focus:outline-none focus:ring-2 focus:ring-[#F1D3CE] font-inter text-sm text-[#2C3E50]"
+                className="mt-1 block w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
                 placeholder="Enter your password"
               />
             </div>
@@ -96,7 +78,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#F1D3CE] text-[#2C3E50] py-2 rounded-lg font-inter font-medium hover:bg-[#F6EACB] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 text-sm font-inter text-white bg-[#4A6B57] rounded-lg hover:bg-[#4A6B57]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>
@@ -104,17 +86,5 @@ function LoginForm() {
         </div>
       </div>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#D1E9F6] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F1D3CE]"></div>
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
   )
 } 

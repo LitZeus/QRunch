@@ -1,7 +1,7 @@
 'use client'
 
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, QrCode } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
@@ -54,42 +54,39 @@ export default function NewTablePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#D1E9F6] p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-[#2C3E50] hover:text-[#F1D3CE] transition-colors duration-200"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
-          </button>
-        </div>
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="flex items-center mb-8">
+        <button
+          onClick={() => router.back()}
+          className="p-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#F0E6D2]/80 transition-colors duration-200"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <h1 className="text-2xl font-playfair font-bold text-[#4A6B57] ml-4">Add New Table</h1>
+      </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-          <h1 className="text-2xl font-playfair font-bold text-[#2C3E50] mb-6">
-            Add New Table
-          </h1>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-[#E8D5B5]">
+          <div className="space-y-4">
             <div>
-              <label htmlFor="table_number" className="block text-sm font-inter text-[#2C3E50] mb-2">
+              <label htmlFor="table_number" className="block text-sm font-inter font-medium text-[#4A6B57] mb-1">
                 Table Number
               </label>
               <input
-                type="text"
+                type="number"
                 id="table_number"
                 name="table_number"
                 value={formData.table_number}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 rounded-lg border border-[#EECAD5] focus:outline-none focus:ring-2 focus:ring-[#F1D3CE] font-inter text-sm text-[#2C3E50]"
+                min="1"
+                className="w-full px-4 py-2 rounded-lg border border-[#E8D5B5] focus:outline-none focus:ring-2 focus:ring-[#4A6B57] focus:border-transparent"
                 placeholder="Enter table number"
               />
             </div>
 
             <div>
-              <label htmlFor="capacity" className="block text-sm font-inter text-[#2C3E50] mb-2">
+              <label htmlFor="capacity" className="block text-sm font-inter font-medium text-[#4A6B57] mb-1">
                 Capacity
               </label>
               <input
@@ -100,13 +97,13 @@ export default function NewTablePage() {
                 onChange={handleChange}
                 required
                 min="1"
-                className="w-full px-4 py-2 rounded-lg border border-[#EECAD5] focus:outline-none focus:ring-2 focus:ring-[#F1D3CE] font-inter text-sm text-[#2C3E50]"
+                className="w-full px-4 py-2 rounded-lg border border-[#E8D5B5] focus:outline-none focus:ring-2 focus:ring-[#4A6B57] focus:border-transparent"
                 placeholder="Enter table capacity"
               />
             </div>
 
             <div>
-              <label htmlFor="location" className="block text-sm font-inter text-[#2C3E50] mb-2">
+              <label htmlFor="location" className="block text-sm font-inter font-medium text-[#4A6B57] mb-1">
                 Location
               </label>
               <input
@@ -115,9 +112,8 @@ export default function NewTablePage() {
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
-                required
-                className="w-full px-4 py-2 rounded-lg border border-[#EECAD5] focus:outline-none focus:ring-2 focus:ring-[#F1D3CE] font-inter text-sm text-[#2C3E50]"
-                placeholder="Enter table location (e.g., 'Indoor', 'Outdoor', 'Bar')"
+                className="w-full px-4 py-2 rounded-lg border border-[#E8D5B5] focus:outline-none focus:ring-2 focus:ring-[#4A6B57] focus:border-transparent"
+                placeholder="Enter table location (e.g., 'Near Window', 'Garden View')"
               />
             </div>
 
@@ -128,32 +124,32 @@ export default function NewTablePage() {
                 name="is_active"
                 checked={formData.is_active}
                 onChange={handleChange}
-                className="h-4 w-4 text-[#F1D3CE] border-[#EECAD5] rounded focus:ring-[#F1D3CE]"
+                className="h-4 w-4 rounded border-[#E8D5B5] text-[#4A6B57] focus:ring-[#4A6B57]"
               />
-              <label htmlFor="is_active" className="ml-2 text-sm font-inter text-[#2C3E50]">
+              <label htmlFor="is_active" className="ml-2 text-sm font-inter text-[#4A6B57]">
                 Active
               </label>
             </div>
-
-            <div className="flex justify-end space-x-4">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="px-6 py-2 rounded-lg border border-[#EECAD5] text-[#2C3E50] font-inter font-medium hover:bg-[#F6EACB] transition-colors duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2 rounded-lg bg-[#F1D3CE] text-[#2C3E50] font-inter font-medium hover:bg-[#F6EACB] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Adding...' : 'Add Table'}
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
-      </div>
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center px-6 py-3 bg-[#4A6B57] text-white rounded-lg hover:bg-[#4A6B57]/90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+            ) : (
+              <>
+                <QrCode className="w-5 h-5 mr-2" />
+                Add Table
+              </>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   )
 } 

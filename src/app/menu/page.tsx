@@ -2,25 +2,24 @@
 
 import { supabase } from '@/lib/supabase'
 import { Category, MenuItem } from '@/types'
-import { ChevronUp, Search, X } from 'lucide-react'
-import Image from 'next/image'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useInView } from 'react-intersection-observer'
+import { ArrowLeft, ArrowUpDown, ChevronDown, ChevronUp, Filter, Heart, Share2, Trash2, ChevronUp as UpIcon, Utensils } from 'lucide-react'
+import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 
-export default function MenuPage() {
+export default function Menu() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [showBackToTop, setShowBackToTop] = useState(false)
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const itemsPerPage = 12
-  const { ref, inView } = useInView()
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
+  const [wishlist, setWishlist] = useState<MenuItem[]>([])
+  const [showWishlist, setShowWishlist] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 })
+  const [sortBy, setSortBy] = useState<'name' | 'price'>('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [showFilters, setShowFilters] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Sort categories by predefined order
@@ -42,89 +41,145 @@ export default function MenuPage() {
     return orderA - orderB
   })
 
-  // Fetch categories
+  // Fetch categories and menu items
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
+        setLoading(true)
+        // Fetch categories
+        const { data: categoriesData, error: categoriesError } = await supabase
           .from('categories')
           .select('*')
           .order('name')
 
-        if (error) throw error
-        setCategories(data || [])
+        if (categoriesError) throw categoriesError
+        setCategories(categoriesData || [])
+
+        // Fetch menu items
+        const { data: menuItemsData, error: menuItemsError } = await supabase
+          .from('menu_items')
+          .select('*, categories(name)')
+          .order('name')
+
+        if (menuItemsError) throw menuItemsError
+        setMenuItems(menuItemsData || [])
       } catch (error: unknown) {
         if (error instanceof Error) {
-          console.error('Error fetching categories:', error.message)
+          console.error('Error fetching data:', error.message)
         } else {
-          console.error('Error fetching categories:', error)
+          console.error('Error fetching data:', error)
         }
+      } finally {
+        setLoading(false)
       }
     }
 
-    fetchCategories()
+    fetchData()
   }, [])
 
-  // Fetch menu items with pagination
-  const fetchMenuItems = useCallback(async (pageNum: number) => {
-    try {
-      setLoadingMore(true)
-      const start = (pageNum - 1) * itemsPerPage
-      const end = start + itemsPerPage - 1
+  useEffect(() => {
+    document.title = 'Menu - Verandah'
+  }, [])
 
-      let query = supabase
-        .from('menu_items')
-        .select('*, categories(name)')
-        .order('name')
-        .range(start, end)
+  // Save wishlist to localStorage
+  useEffect(() => {
+    localStorage.setItem('wishlist', JSON.stringify(wishlist))
+  }, [wishlist])
 
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory)
-      }
+  // Load wishlist from localStorage
+  useEffect(() => {
+    const savedWishlist = localStorage.getItem('wishlist')
+    if (savedWishlist) {
+      setWishlist(JSON.parse(savedWishlist))
+    }
+  }, [])
 
-      if (searchQuery) {
-        query = query.ilike('name', `%${searchQuery}%`)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-
-      if (data) {
-        if (pageNum === 1) {
-          setMenuItems(data)
-        } else {
-          setMenuItems(prev => [...prev, ...data])
-        }
-        setHasMore(data.length === itemsPerPage)
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Error fetching menu items:', error.message)
+  // Filter and sort menu items
+  const filteredMenuItems = menuItems
+    .filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category_id)
+      const matchesPrice = item.price >= priceRange.min && item.price <= priceRange.max
+      return matchesSearch && matchesCategory && matchesPrice
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') {
+        return sortOrder === 'asc' 
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name)
       } else {
-        console.error('Error fetching menu items:', error)
+        return sortOrder === 'asc'
+          ? a.price - b.price
+          : b.price - a.price
       }
-    } finally {
-      setLoading(false)
-      setLoadingMore(false)
+    })
+
+  // Toggle category with simple animation
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }))
+  }
+
+  // Toggle wishlist with simple animation
+  const toggleWishlist = (item: MenuItem) => {
+    setWishlist(prev => {
+      const isInWishlist = prev.some(i => i.id === item.id)
+      return isInWishlist
+        ? prev.filter(i => i.id !== item.id)
+        : [...prev, item]
+    })
+  }
+
+  // Clear wishlist
+  const clearWishlist = () => {
+    setWishlist([])
+  }
+
+  // Share wishlist
+  const shareWishlist = async () => {
+    const wishlistText = wishlist.map(item => `${item.name} - ₹${item.price}`).join('\n')
+    const shareData = {
+      title: 'My Verandah Wishlist',
+      text: wishlistText,
     }
-  }, [selectedCategory, searchQuery])
 
-  // Initial load
-  useEffect(() => {
-    setPage(1)
-    fetchMenuItems(1)
-  }, [selectedCategory, searchQuery, fetchMenuItems])
-
-  // Load more when scrolling
-  useEffect(() => {
-    if (inView && hasMore && !loadingMore) {
-      setPage(prev => prev + 1)
-      fetchMenuItems(page + 1)
+    try {
+      // Try Web Share API first
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share(shareData)
+      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        // Fallback to clipboard API
+        await navigator.clipboard.writeText(wishlistText)
+        alert('Wishlist copied to clipboard!')
+      } else {
+        // Manual copy fallback
+        const textArea = document.createElement('textarea')
+        textArea.value = wishlistText
+        document.body.appendChild(textArea)
+        textArea.select()
+        try {
+          document.execCommand('copy')
+          alert('Wishlist copied to clipboard!')
+        } catch (err) {
+          alert(`My Verandah Wishlist:\n\n${wishlistText}\n\nYou can copy this text manually.`)
+        }
+        document.body.removeChild(textArea)
+      }
+    } catch (error) {
+      console.error('Error sharing:', error)
+      // If all methods fail, show the text in an alert
+      alert(`My Verandah Wishlist:\n\n${wishlistText}\n\nYou can copy this text manually.`)
     }
-  }, [inView, hasMore, loadingMore, page, fetchMenuItems])
+  }
 
-  // Handle scroll for back to top button
+  // Handle scroll to top
+  const handleScrollToTop = () => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Show/hide back to top button
   useEffect(() => {
     const handleScroll = () => {
       if (scrollRef.current) {
@@ -132,253 +187,279 @@ export default function MenuPage() {
       }
     }
 
-    const scrollElement = scrollRef.current
-    if (scrollElement) {
-      scrollElement.addEventListener('scroll', handleScroll)
-      return () => scrollElement.removeEventListener('scroll', handleScroll)
-    }
+    scrollRef.current?.addEventListener('scroll', handleScroll)
+    return () => scrollRef.current?.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Back to top function
-  const scrollToTop = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }
-
-  // Handle drawer open/close
-  const handleItemClick = (item: MenuItem) => {
-    setSelectedItem(item)
-    setIsDrawerOpen(true)
-  }
-
-  const handleCloseDrawer = () => {
-    setIsDrawerOpen(false)
-    setSelectedItem(null)
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#4A6B57]"></div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-[#D1E9F6]">
+    <div className="min-h-screen bg-[#F5F5F5]">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#F6EACB] via-[#EECAD5] to-[#F1D3CE]">
-        <div className="max-w-7xl mx-auto px-3 py-4 sm:py-12 sm:px-6 lg:px-8">
-          <h1 className="text-center font-playfair text-xl sm:text-4xl font-bold text-[#2C3E50] mb-2">
-            Our Menu
-          </h1>
-          <p className="text-center font-inter text-[#2C3E50]/90 text-xs sm:text-lg max-w-2xl mx-auto">
-            Discover our selection of fresh, homemade dishes and specialty coffee drinks
-          </p>
-        </div>
-      </div>
-
-      {/* Search and Categories */}
-      <div className="max-w-7xl mx-auto px-3 py-3 sm:py-6 sm:px-6 lg:px-8">
-        {/* Search Bar */}
-        <div className="relative mb-3">
-          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#2C3E50]/40" />
-          <input
-            type="text"
-            placeholder="Search menu items..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 rounded-lg border border-[#EECAD5] focus:outline-none focus:ring-2 focus:ring-[#F1D3CE] font-inter text-sm text-[#2C3E50] placeholder-[#2C3E50]/40 bg-white/80 backdrop-blur-sm shadow-sm"
-          />
-        </div>
-
-        {/* Categories Ribbon */}
-        <div className="overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
-          <div className="flex gap-1.5 min-w-max">
+      <div className="bg-[#4A6B57] shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex flex-col items-center">
+            <div className="flex items-center justify-center w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-white/90 backdrop-blur-sm mb-4">
+              <Utensils className="w-7 h-7 sm:w-10 sm:h-10 text-[#4A6B57]" />
+            </div>
+            <Link href="/" className="text-2xl sm:text-3xl font-playfair font-bold text-white text-center hover:text-white/90 transition-colors">
+              Verandah
+            </Link>
             <button
-              onClick={() => setSelectedCategory(null)}
-              className={`px-3 py-1.5 rounded-full text-xs font-inter whitespace-nowrap transition-colors ${
-                !selectedCategory
-                  ? 'bg-[#F1D3CE] text-[#2C3E50]'
-                  : 'bg-white text-[#2C3E50]/80 hover:bg-[#F6EACB]'
-              }`}
+              onClick={() => setShowWishlist(!showWishlist)}
+              className="mt-4 flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white/90 backdrop-blur-sm text-[#4A6B57] hover:bg-white transition-colors text-sm sm:text-base"
             >
-              All
+              <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${wishlist.length > 0 ? 'text-red-500 fill-red-500' : 'text-[#4A6B57]'}`} />
+              <span>Wishlist ({wishlist.length})</span>
             </button>
-            {sortedCategories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-inter whitespace-nowrap transition-colors ${
-                  selectedCategory === category.id
-                    ? 'bg-[#F1D3CE] text-[#2C3E50]'
-                    : 'bg-white text-[#2C3E50]/80 hover:bg-[#F6EACB]'
-                }`}
-              >
-                {category.name}
-              </button>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* Menu Content */}
-      <div 
-        ref={scrollRef}
-        className="max-w-7xl mx-auto px-3 pb-12 sm:px-6 lg:px-8 h-[calc(100vh-16rem)] overflow-y-auto"
-      >
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F1D3CE]"></div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {showWishlist ? (
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-playfair font-semibold text-[#4A6B57]">Your Wishlist</h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={shareWishlist}
+                  className="p-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors"
+                  title="Share Wishlist"
+                >
+                  <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+                <button
+                  onClick={clearWishlist}
+                  className="p-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors"
+                  title="Clear Wishlist"
+                >
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+                <button
+                  onClick={() => setShowWishlist(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="text-sm">Back</span>
+                </button>
+              </div>
+            </div>
+            {wishlist.length === 0 ? (
+              <div className="text-center py-6 sm:py-8">
+                <Heart className="w-10 h-10 sm:w-12 sm:h-12 text-[#4A6B57]/30 mx-auto mb-3 sm:mb-4" />
+                <p className="text-sm sm:text-base text-[#4A6B57]/70">Your wishlist is empty</p>
+              </div>
+            ) : (
+              <div className="space-y-3 sm:space-y-4">
+                {wishlist.map(item => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-3 sm:p-4 rounded-lg bg-[#F0E6D2] transition-colors hover:bg-[#E8D9B5]"
+                  >
+                    <div>
+                      <h3 className="text-sm sm:text-base font-medium text-[#4A6B57]">{item.name}</h3>
+                      <p className="text-xs sm:text-sm text-[#4A6B57]/70">{item.categories?.name}</p>
+                    </div>
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <span className="text-sm sm:text-base text-[#4A6B57] font-medium">₹{item.price}</span>
+                      <button
+                        onClick={() => toggleWishlist(item)}
+                        className="p-1 rounded-full hover:bg-[#E8D9B5]"
+                      >
+                        <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 fill-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6">
-            {menuItems.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300"
-              >
-                {/* Desktop View */}
-                <div className="hidden sm:block">
-                  <div className="relative h-48">
-                    <Image
-                      src={item.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      loading="lazy"
-                    />
+          <div className="flex flex-col gap-6 sm:gap-8">
+            {/* Search and Filters */}
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+              <div className="flex flex-col gap-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search menu items..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2 pl-10 rounded-lg border border-[#E8D5B5] focus:outline-none focus:ring-2 focus:ring-[#4A6B57] focus:border-transparent text-sm sm:text-base text-[#4A6B57] placeholder-[#4A6B57]/50 bg-white"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg
+                      className="h-4 w-4 sm:h-5 sm:w-5 text-[#4A6B57]/50"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-playfair text-xl font-semibold text-[#2C3E50] mb-2">
-                      {item.name}
-                    </h3>
-                    <p className="text-sm text-[#2C3E50]/80 font-inter mb-3">
-                      {item.description}
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <span className="font-inter font-semibold text-[#2C3E50]">
-                        ₹{item.price.toFixed(2)}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-inter ${
-                        item.is_available
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {item.is_available ? 'Available' : 'Unavailable'}
-                      </span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
+                    <button
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors w-full sm:w-auto"
+                    >
+                      <Filter className="w-4 h-4" />
+                      <span className="text-sm">Filters</span>
+                    </button>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as 'name' | 'price')}
+                        className="w-full sm:w-auto px-3 py-2 rounded-lg border border-[#E8D5B5] focus:outline-none focus:ring-2 focus:ring-[#4A6B57] focus:border-transparent text-sm text-[#4A6B57] bg-white"
+                      >
+                        <option value="name">Sort by Name</option>
+                        <option value="price">Sort by Price</option>
+                      </select>
+                      <button
+                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                        className="p-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors"
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Mobile List View */}
-                <div 
-                  className="sm:hidden p-2.5 flex items-center justify-between cursor-pointer"
-                  onClick={() => handleItemClick(item)}
-                >
-                  <div className="flex-1 min-w-0 mr-2">
-                    <h3 className="font-playfair text-sm font-semibold text-[#2C3E50] truncate">
-                      {item.name}
-                    </h3>
-                    <p className="text-[10px] text-[#2C3E50]/80 font-inter line-clamp-1">
-                      {item.description}
-                    </p>
+                {showFilters && (
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#F0E6D2] rounded-lg">
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-[#4A6B57]">Categories</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {categories.map(category => (
+                          <button
+                            key={category.id}
+                            onClick={() => {
+                              setSelectedCategories(prev =>
+                                prev.includes(category.id)
+                                  ? prev.filter(id => id !== category.id)
+                                  : [...prev, category.id]
+                              )
+                            }}
+                            className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                              selectedCategories.includes(category.id)
+                                ? 'bg-[#4A6B57] text-white'
+                                : 'bg-white text-[#4A6B57] hover:bg-[#E8D9B5]'
+                            }`}
+                          >
+                            {category.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-[#4A6B57]">Price Range</h3>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={priceRange.min}
+                          onChange={(e) => setPriceRange(prev => ({ ...prev, min: Number(e.target.value) }))}
+                          className="w-20 px-2 py-1 rounded-lg border border-[#E8D5B5] text-sm text-[#4A6B57] bg-white"
+                          placeholder="Min"
+                        />
+                        <span className="text-[#4A6B57]">to</span>
+                        <input
+                          type="number"
+                          value={priceRange.max}
+                          onChange={(e) => setPriceRange(prev => ({ ...prev, max: Number(e.target.value) }))}
+                          className="w-20 px-2 py-1 rounded-lg border border-[#E8D5B5] text-sm text-[#4A6B57] bg-white"
+                          placeholder="Max"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="font-inter font-semibold text-[#2C3E50] text-xs">
-                      ₹{item.price.toFixed(2)}
-                    </span>
-                    <span className={`px-1 py-0.5 rounded-full text-[10px] font-inter ${
-                      item.is_available
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {item.is_available ? 'Available' : 'Unavailable'}
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+            </div>
 
-        {/* Loading More Indicator */}
-        {loadingMore && (
-          <div className="flex justify-center items-center py-6">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F1D3CE]"></div>
-          </div>
-        )}
-
-        {/* Load More Trigger */}
-        <div ref={ref} className="h-8" />
-
-        {/* No Results Message */}
-        {!loading && menuItems.length === 0 && (
-          <div className="text-center py-8">
-            <p className="font-inter text-[#2C3E50]/80 text-xs">
-              No menu items found matching your search criteria.
-            </p>
+            {/* Categories and Menu Items */}
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-playfair font-semibold text-[#4A6B57] mb-4 sm:mb-6">Menu</h2>
+              <div className="space-y-3 sm:space-y-4">
+                {sortedCategories.map((category) => (
+                  <div key={category.id} className="space-y-2">
+                    <button
+                      onClick={() => toggleCategory(category.id)}
+                      className="flex items-center justify-between w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg bg-[#F0E6D2] hover:bg-[#E8D9B5] transition-colors"
+                    >
+                      <span className="text-base sm:text-lg font-medium text-[#4A6B57]">{category.name}</span>
+                      {expandedCategories[category.id] ? (
+                        <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#4A6B57]" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-[#4A6B57]" />
+                      )}
+                    </button>
+                    <div
+                      className={`overflow-hidden transition-all duration-150 ease-in-out ${
+                        expandedCategories[category.id] ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      <div className="pl-3 sm:pl-4 space-y-2">
+                        {filteredMenuItems
+                          .filter(item => item.category_id === category.id)
+                          .map(item => (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 rounded-lg hover:bg-[#F0E6D2] transition-colors"
+                            >
+                              <div>
+                                <h3 className="text-sm sm:text-base font-medium text-[#4A6B57]">{item.name}</h3>
+                                <p className="text-xs sm:text-sm text-[#4A6B57]/70">{item.description}</p>
+                              </div>
+                              <div className="flex items-center gap-3 sm:gap-4">
+                                <span className="text-sm sm:text-base text-[#4A6B57] font-medium">₹{item.price}</span>
+                                <button
+                                  onClick={() => toggleWishlist(item)}
+                                  className="p-1 rounded-full hover:bg-[#E8D9B5]"
+                                >
+                                  <Heart
+                                    className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
+                                      wishlist.some(i => i.id === item.id)
+                                        ? 'text-red-500 fill-red-500'
+                                        : 'text-[#4A6B57]'
+                                    }`}
+                                  />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Mobile Drawer */}
-      {isDrawerOpen && selectedItem && (
-        <div className="fixed inset-0 z-50 sm:hidden">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50 transition-opacity duration-300"
-            onClick={handleCloseDrawer}
-          />
-          
-          {/* Drawer */}
-          <div 
-            className="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-xl transform transition-transform duration-300 ease-out"
-            style={{ transform: isDrawerOpen ? 'translateX(0)' : 'translateX(100%)' }}
-          >
-            <div className="relative h-40">
-              <Image
-                src={selectedItem.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'}
-                alt={selectedItem.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 384px"
-                loading="lazy"
-              />
-              <button
-                onClick={handleCloseDrawer}
-                className="absolute top-3 right-3 p-1.5 rounded-full bg-white/90 text-[#2C3E50] hover:bg-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-3">
-              <h2 className="font-playfair text-lg font-semibold text-[#2C3E50] mb-1.5">
-                {selectedItem.name}
-              </h2>
-              <p className="text-xs text-[#2C3E50]/80 font-inter mb-2">
-                {selectedItem.description}
-              </p>
-              <div className="flex justify-between items-center">
-                <span className="font-inter font-semibold text-[#2C3E50] text-sm">
-                  ₹{selectedItem.price.toFixed(2)}
-                </span>
-                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-inter ${
-                  selectedItem.is_available
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {selectedItem.is_available ? 'Available' : 'Unavailable'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Back to Top Button */}
+      {/* Scroll to Top Button */}
       {showBackToTop && (
         <button
-          onClick={scrollToTop}
-          className="fixed bottom-4 right-4 bg-[#F6EACB] text-[#2C3E50] p-2 rounded-full shadow-lg hover:bg-[#F1D3CE] transition-colors duration-300 z-50"
+          onClick={handleScrollToTop}
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 p-2 sm:p-3 rounded-full bg-[#4A6B57] text-white shadow-lg hover:bg-[#4A6B57]/90 transition-colors duration-200"
+          aria-label="Scroll to top"
         >
-          <ChevronUp className="w-5 h-5" />
+          <UpIcon className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
       )}
     </div>
   )
-} 
+}

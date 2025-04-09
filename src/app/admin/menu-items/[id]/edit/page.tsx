@@ -1,25 +1,59 @@
 'use client'
 
 import { supabase } from '@/lib/supabase'
-import { Category } from '@/types'
+import { Category, MenuItem } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
-export default function NewMenuItem() {
+interface PageParams {
+  id: string
+}
+
+export default function EditMenuItem({ params }: { params: Promise<PageParams> }) {
   const router = useRouter()
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [price, setPrice] = useState('')
-  const [categoryId, setCategoryId] = useState('')
+  const resolvedParams = use(params)
+  const [menuItem, setMenuItem] = useState<MenuItem | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category_id: ''
+  })
 
   useEffect(() => {
+    fetchMenuItem()
     fetchCategories()
-  }, [])
+  }, [resolvedParams.id])
+
+  const fetchMenuItem = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('*')
+        .eq('id', resolvedParams.id)
+        .single()
+
+      if (error) throw error
+
+      setMenuItem(data)
+      setFormData({
+        name: data.name,
+        description: data.description,
+        price: data.price.toString(),
+        category_id: data.category_id
+      })
+    } catch (error) {
+      console.error('Error fetching menu item:', error)
+      toast.error('Failed to fetch menu item')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchCategories = async () => {
     try {
@@ -43,24 +77,46 @@ export default function NewMenuItem() {
     try {
       const { error } = await supabase
         .from('menu_items')
-        .insert([{
-          name,
-          description,
-          price: parseFloat(price),
-          category_id: categoryId,
-          is_available: true
-        }])
+        .update({
+          name: formData.name,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          category_id: formData.category_id
+        })
+        .eq('id', resolvedParams.id)
 
       if (error) throw error
 
-      toast.success('Menu item created successfully')
+      toast.success('Menu item updated successfully')
       router.push('/admin/menu-items')
     } catch (error) {
-      console.error('Error creating menu item:', error)
-      toast.error('Failed to create menu item')
+      console.error('Error updating menu item:', error)
+      toast.error('Failed to update menu item')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#4A6B57]"></div>
+      </div>
+    )
+  }
+
+  if (!menuItem) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-[#4A6B57]">Menu item not found</p>
+        <Link
+          href="/admin/menu-items"
+          className="mt-4 inline-block text-sm font-inter text-[#4A6B57] hover:text-[#4A6B57]/80"
+        >
+          Back to Menu Items
+        </Link>
+      </div>
+    )
   }
 
   return (
@@ -74,9 +130,9 @@ export default function NewMenuItem() {
           <ArrowLeft className="w-5 h-5 text-[#4A6B57]" />
         </Link>
         <div>
-          <h1 className="text-2xl font-playfair font-bold text-[#4A6B57]">New Menu Item</h1>
+          <h1 className="text-2xl font-playfair font-bold text-[#4A6B57]">Edit Menu Item</h1>
           <p className="mt-1 text-sm font-inter text-[#4A6B57]/70">
-            Create a new menu item
+            Update menu item details
           </p>
         </div>
       </div>
@@ -91,11 +147,11 @@ export default function NewMenuItem() {
             <input
               type="text"
               id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               className="mt-1 block w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
-              placeholder="Enter menu item name"
+              placeholder="Enter item name"
             />
           </div>
 
@@ -105,11 +161,11 @@ export default function NewMenuItem() {
             </label>
             <textarea
               id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
               className="mt-1 block w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
-              placeholder="Enter menu item description"
+              placeholder="Enter item description"
             />
           </div>
 
@@ -124,8 +180,8 @@ export default function NewMenuItem() {
               <input
                 type="number"
                 id="price"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 required
                 min="0"
                 step="0.01"
@@ -141,8 +197,8 @@ export default function NewMenuItem() {
             </label>
             <select
               id="category"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              value={formData.category_id}
+              onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
               required
               className="mt-1 block w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
             >
@@ -167,7 +223,7 @@ export default function NewMenuItem() {
               disabled={loading}
               className="px-4 py-2 text-sm font-inter text-white bg-[#4A6B57] rounded-lg hover:bg-[#4A6B57]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating...' : 'Create Menu Item'}
+              {loading ? 'Updating...' : 'Update Menu Item'}
             </button>
           </div>
         </form>

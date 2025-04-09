@@ -1,17 +1,53 @@
 'use client'
 
 import { supabase } from '@/lib/supabase'
+import { Category } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
-export default function NewCategory() {
+interface PageParams {
+  id: string
+}
+
+export default function EditCategory({ params }: { params: Promise<PageParams> }) {
   const router = useRouter()
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [loading, setLoading] = useState(false)
+  const resolvedParams = use(params)
+  const [category, setCategory] = useState<Category | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [formData, setFormData] = useState({
+    name: '',
+    description: ''
+  })
+
+  useEffect(() => {
+    fetchCategory()
+  }, [resolvedParams.id])
+
+  const fetchCategory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('id', resolvedParams.id)
+        .single()
+
+      if (error) throw error
+
+      setCategory(data)
+      setFormData({
+        name: data.name,
+        description: data.description || ''
+      })
+    } catch (error) {
+      console.error('Error fetching category:', error)
+      toast.error('Failed to fetch category')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,18 +56,44 @@ export default function NewCategory() {
     try {
       const { error } = await supabase
         .from('categories')
-        .insert([{ name, description }])
+        .update({
+          name: formData.name,
+          description: formData.description
+        })
+        .eq('id', resolvedParams.id)
 
       if (error) throw error
 
-      toast.success('Category created successfully')
+      toast.success('Category updated successfully')
       router.push('/admin/categories')
     } catch (error) {
-      console.error('Error creating category:', error)
-      toast.error('Failed to create category')
+      console.error('Error updating category:', error)
+      toast.error('Failed to update category')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#4A6B57]"></div>
+      </div>
+    )
+  }
+
+  if (!category) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-[#4A6B57]">Category not found</p>
+        <Link
+          href="/admin/categories"
+          className="mt-4 inline-block text-sm font-inter text-[#4A6B57] hover:text-[#4A6B57]/80"
+        >
+          Back to Categories
+        </Link>
+      </div>
+    )
   }
 
   return (
@@ -45,9 +107,9 @@ export default function NewCategory() {
           <ArrowLeft className="w-5 h-5 text-[#4A6B57]" />
         </Link>
         <div>
-          <h1 className="text-2xl font-playfair font-bold text-[#4A6B57]">New Category</h1>
+          <h1 className="text-2xl font-playfair font-bold text-[#4A6B57]">Edit Category</h1>
           <p className="mt-1 text-sm font-inter text-[#4A6B57]/70">
-            Create a new menu category
+            Update category details
           </p>
         </div>
       </div>
@@ -62,8 +124,8 @@ export default function NewCategory() {
             <input
               type="text"
               id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               className="mt-1 block w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
               placeholder="Enter category name"
@@ -76,8 +138,8 @@ export default function NewCategory() {
             </label>
             <textarea
               id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
               className="mt-1 block w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
               placeholder="Enter category description"
@@ -96,7 +158,7 @@ export default function NewCategory() {
               disabled={loading}
               className="px-4 py-2 text-sm font-inter text-white bg-[#4A6B57] rounded-lg hover:bg-[#4A6B57]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating...' : 'Create Category'}
+              {loading ? 'Updating...' : 'Update Category'}
             </button>
           </div>
         </form>

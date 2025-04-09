@@ -1,12 +1,13 @@
 'use client'
 
-import { Category, supabase } from '@/lib/supabase'
-import { Edit, Folder, Plus, Search, Trash2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { Category } from '@/types'
+import { ChevronRight, Edit, Home, Plus, Search, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
-export default function CategoriesPage() {
+export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -32,7 +33,7 @@ export default function CategoriesPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteCategory = async (id: string) => {
     if (!confirm('Are you sure you want to delete this category?')) return
 
     try {
@@ -43,7 +44,7 @@ export default function CategoriesPage() {
 
       if (error) throw error
 
-      setCategories(categories.filter((category) => category.id !== id))
+      setCategories(prev => prev.filter(category => category.id !== id))
       toast.success('Category deleted successfully')
     } catch (error) {
       console.error('Error deleting category:', error)
@@ -51,92 +52,106 @@ export default function CategoriesPage() {
     }
   }
 
-  const filteredCategories = categories.filter((category) =>
+  const filteredCategories = categories.filter(category =>
     category.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#4A6B57]"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center gap-2 text-sm font-inter text-[#4A6B57]">
+        <Link href="/admin" className="flex items-center gap-1 hover:text-[#4A6B57]/80">
+          <Home className="w-4 h-4" />
+          <span>Dashboard</span>
+        </Link>
+        <ChevronRight className="w-4 h-4" />
+        <span className="text-[#4A6B57]/70">Categories</span>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-playfair font-bold text-[#2C3E50] mb-1">
-            Categories
-          </h1>
-          <p className="text-[#2C3E50]/80 font-inter">
-            Organize your menu items into categories
+          <h1 className="text-xl sm:text-2xl font-playfair font-bold text-[#4A6B57]">Categories</h1>
+          <p className="mt-1 text-sm font-inter text-[#4A6B57]/70">
+            Manage your menu categories
           </p>
         </div>
         <Link
           href="/admin/categories/new"
-          className="inline-flex items-center px-4 py-2 bg-[#F6EACB] text-[#2C3E50] rounded-lg hover:bg-[#F1D3CE] transition-colors duration-300 font-inter"
+          className="flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-inter text-white bg-[#4A6B57] rounded-lg hover:bg-[#4A6B57]/90 transition-colors"
         >
-          <Plus className="w-5 h-5 mr-2" />
-          Add New Category
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">Add New Category</span>
+          <span className="sm:hidden">Add</span>
         </Link>
       </div>
 
       {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#F1D3CE]" />
-        <input
-          type="text"
-          placeholder="Search categories..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-[#EECAD5] text-[#2C3E50] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F1D3CE] focus:border-transparent placeholder-[#F1D3CE] font-inter"
-        />
-      </div>
-
-      {/* Categories Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCategories.map((category) => (
-          <div
-            key={category.id}
-            className="bg-white rounded-xl shadow-lg p-6 border border-[#EECAD5] group"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-lg bg-[#F6EACB] group-hover:bg-[#F1D3CE] transition-colors duration-300">
-                <Folder className="w-6 h-6 text-[#2C3E50]" />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Link
-                  href={`/admin/categories/${category.id}/edit`}
-                  className="p-2 text-[#2C3E50] hover:bg-[#F6EACB] rounded-lg transition-colors duration-300"
-                >
-                  <Edit className="w-4 h-4" />
-                </Link>
-                <button
-                  onClick={() => handleDelete(category.id)}
-                  className="p-2 text-[#2C3E50] hover:bg-[#F6EACB] rounded-lg transition-colors duration-300"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <h3 className="text-lg font-playfair font-semibold text-[#2C3E50] mb-2">
-              {category.name}
-            </h3>
-            <p className="text-sm text-[#2C3E50]/80 font-inter">
-              {category.description || 'No description provided'}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {filteredCategories.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-[#2C3E50] font-inter">No categories found matching your search.</p>
+      <div className="bg-white rounded-xl shadow-sm border border-[#E8D5B5] p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#4A6B57]/50" />
+          <input
+            type="text"
+            placeholder="Search categories..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
+          />
         </div>
-      )}
+      </div>
+
+      {/* Categories List */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#E8D5B5] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[#F5F5F5]">
+                <th className="px-3 sm:px-4 py-2 text-left text-xs font-inter font-medium text-[#4A6B57] uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-3 sm:px-4 py-2 text-right text-xs font-inter font-medium text-[#4A6B57] uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E8D5B5]">
+              {filteredCategories.map((category) => (
+                <tr key={category.id} className="hover:bg-[#F5F5F5]">
+                  <td className="px-3 sm:px-4 py-2">
+                    <div className="text-sm font-medium text-[#4A6B57]">{category.name}</div>
+                  </td>
+                  <td className="px-3 sm:px-4 py-2 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link
+                        href={`/admin/categories/${category.id}/edit`}
+                        className="p-1.5 rounded-lg hover:bg-[#F0E6D2] transition-colors"
+                        title="Edit"
+                      >
+                        <Edit className="w-4 h-4 text-[#4A6B57]" />
+                      </Link>
+                      <button
+                        onClick={() => handleDeleteCategory(category.id)}
+                        className="p-1.5 rounded-lg hover:bg-[#F0E6D2] transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4 text-[#4A6B57]" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 } 
