@@ -60,7 +60,7 @@ export default function TestimonialsCarousel() {
                   ))}
                 </div>
               </div>
-              <p className="text-[#2C3E50] mb-4 italic">"{testimonial.review}"</p>
+              <p className="text-[#2C3E50] mb-4 italic">&ldquo;{testimonial.review}&rdquo;</p>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="w-10 h-10 rounded-full bg-[#F1D3CE] mr-3"></div>
@@ -88,4 +88,4 @@ export default function TestimonialsCarousel() {
       </div>
     </div>
   )
-} 
+}

@@ -149,20 +149,20 @@ export default function Menu() {
       // Try Web Share API first
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share(shareData)
-      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      } else if (typeof navigator !== &apos;undefined&apos; && navigator.clipboard) {
         // Fallback to clipboard API
         await navigator.clipboard.writeText(wishlistText)
-        alert('Wishlist copied to clipboard!')
+        alert(&apos;Wishlist copied to clipboard!&apos;)
       } else {
         // Manual copy fallback
-        const textArea = document.createElement('textarea')
+        const textArea = document.createElement(&apos;textarea&apos;)
         textArea.value = wishlistText
         document.body.appendChild(textArea)
         textArea.select()
         try {
-          document.execCommand('copy')
-          alert('Wishlist copied to clipboard!')
-        } catch (err) {
+          document.execCommand(&apos;copy&apos;)
+          alert(&apos;Wishlist copied to clipboard!&apos;)
+        } catch (error) {
           alert(`My Verandah Wishlist:\n\n${wishlistText}\n\nYou can copy this text manually.`)
         }
         document.body.removeChild(textArea)
@@ -187,8 +187,9 @@ export default function Menu() {
       }
     }
 
-    scrollRef.current?.addEventListener('scroll', handleScroll)
-    return () => scrollRef.current?.removeEventListener('scroll', handleScroll)
+    const currentRef = scrollRef.current
+    currentRef?.addEventListener('scroll', handleScroll)
+    return () => currentRef?.removeEventListener('scroll', handleScroll)
   }, [])
 
   if (loading) {
