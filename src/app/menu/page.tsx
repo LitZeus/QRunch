@@ -158,13 +158,13 @@ export default function Menu() {
         try {
           document.execCommand('copy')
           alert('Wishlist copied to clipboard!')
-        } catch (err) {
+        } catch {
           alert(`My Verandah Wishlist:\n\n${wishlistText}\n\nYou can copy this text manually.`)
         }
         document.body.removeChild(textArea)
       }
-    } catch (err) {
-      console.error('Error sharing:', err)
+    } catch (error) {
+      console.error('Error sharing:', error)
       // If all methods fail, show the text in an alert
       alert(`My Verandah Wishlist:\n\n${wishlistText}\n\nYou can copy this text manually.`)
     }
