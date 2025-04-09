@@ -149,19 +149,19 @@ export default function Menu() {
       // Try Web Share API first
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share(shareData)
-      } else if (typeof navigator !== &apos;undefined&apos; && navigator.clipboard) {
+      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
         // Fallback to clipboard API
         await navigator.clipboard.writeText(wishlistText)
-        alert(&apos;Wishlist copied to clipboard!&apos;)
+        alert('Wishlist copied to clipboard!')
       } else {
         // Manual copy fallback
-        const textArea = document.createElement(&apos;textarea&apos;)
+        const textArea = document.createElement('textarea')
         textArea.value = wishlistText
         document.body.appendChild(textArea)
         textArea.select()
         try {
-          document.execCommand(&apos;copy&apos;)
-          alert(&apos;Wishlist copied to clipboard!&apos;)
+          document.execCommand('copy')
+          alert('Wishlist copied to clipboard!')
         } catch (error) {
           alert(`My Verandah Wishlist:\n\n${wishlistText}\n\nYou can copy this text manually.`)
         }
