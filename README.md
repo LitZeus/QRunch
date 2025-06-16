@@ -32,15 +32,13 @@ A modern, responsive digital menu application for restaurants and cafes. Built w
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/the-grand-plate.git
-cd the-grand-plate
+git clone https://github.com/yourusername/QRunch.git
+cd QRunch
 ```
 
 2. Install dependencies:
 ```bash
 npm install
-# or
-yarn install
 ```
 
 3. Create a `.env.local` file in the root directory and add your Supabase credentials:
@@ -52,8 +50,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 4. Run the development server:
 ```bash
 npm run dev
-# or
-yarn dev
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -70,9 +66,6 @@ This project is configured for deployment on Vercel:
 ## Environment Variables
 
 Required environment variables:
-
-- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
 
 ## Contributing
 
