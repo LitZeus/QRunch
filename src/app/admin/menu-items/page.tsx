@@ -1,19 +1,25 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
-import { Category, MenuItem } from '@/types'
+import { Category, MenuItem } from '@/lib/models'
 import { ChevronRight, Edit, Home, Plus, Search, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
+interface MenuItemWithCategory extends Omit<MenuItem, 'category_id'> {
+  category_name: string;
+  category_id: string;
+}
+
 export default function MenuItems() {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [menuItems, setMenuItems] = useState<MenuItemWithCategory[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [priceRange, setPriceRange] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     fetchCategories()
@@ -22,13 +28,10 @@ export default function MenuItems() {
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      setCategories(data || [])
+      const response = await fetch('/api/admin/categories')
+      if (!response.ok) throw new Error('Failed to fetch categories')
+      const data = await response.json()
+      setCategories(data)
     } catch (error) {
       console.error('Error fetching categories:', error)
       toast.error('Failed to fetch categories')
@@ -37,13 +40,10 @@ export default function MenuItems() {
 
   const fetchMenuItems = async () => {
     try {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*, categories(name)')
-        .order('name')
-
-      if (error) throw error
-      setMenuItems(data || [])
+      const response = await fetch('/api/admin/menu-items')
+      if (!response.ok) throw new Error('Failed to fetch menu items')
+      const data = await response.json()
+      setMenuItems(data)
     } catch (error) {
       console.error('Error fetching menu items:', error)
       toast.error('Failed to fetch menu items')
@@ -56,13 +56,12 @@ export default function MenuItems() {
     if (!confirm('Are you sure you want to delete this menu item?')) return
 
     try {
-      const { error } = await supabase
-        .from('menu_items')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
+      const response = await fetch(`/api/admin/menu-items/${id}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) throw new Error('Failed to delete menu item')
+      
       setMenuItems(prev => prev.filter(item => item.id !== id))
       toast.success('Menu item deleted successfully')
     } catch (error) {
@@ -73,16 +72,19 @@ export default function MenuItems() {
 
   const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.categories?.name.toLowerCase().includes(searchQuery.toLowerCase())
+      item.description?.toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesCategory = !selectedCategory || item.category_id === selectedCategory
     
-    const matchesPrice = !priceRange || (
-      priceRange === 'low' && item.price < 200 ||
-      priceRange === 'medium' && item.price >= 200 && item.price < 500 ||
-      priceRange === 'high' && item.price >= 500
-    )
-
+    let matchesPrice = true
+    if (priceRange === 'under10') {
+      matchesPrice = item.price < 10
+    } else if (priceRange === '10-20') {
+      matchesPrice = item.price >= 10 && item.price <= 20
+    } else if (priceRange === 'over20') {
+      matchesPrice = item.price > 20
+    }
+    
     return matchesSearch && matchesCategory && matchesPrice
   })
 
@@ -202,7 +204,7 @@ export default function MenuItems() {
                   </td>
                   <td className="px-3 sm:px-4 py-2">
                     <div className="text-sm text-[#4A6B57]">
-                      {item.categories?.name || 'Uncategorized'}
+                      {item.category_name || 'Uncategorized'}
                     </div>
                   </td>
                   <td className="px-3 sm:px-4 py-2">

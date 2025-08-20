@@ -1,6 +1,5 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
 import { Category } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -23,12 +22,11 @@ export default function NewMenuItem() {
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
+      const response = await fetch('/api/admin/categories')
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories')
+      }
+      const data = await response.json()
       setCategories(data || [])
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -41,23 +39,30 @@ export default function NewMenuItem() {
     setLoading(true)
 
     try {
-      const { error } = await supabase
-        .from('menu_items')
-        .insert([{
+      const response = await fetch('/api/admin/menu-items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           name,
           description,
           price: parseFloat(price),
           category_id: categoryId,
           is_available: true
-        }])
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to create menu item')
+      }
 
-      toast.success('Menu item created successfully')
-      router.push('/admin/menu-items')
-    } catch (error) {
+      toast.success('Menu item created successfully!')
+      router.push('/admin')
+    } catch (error: any) {
       console.error('Error creating menu item:', error)
-      toast.error('Failed to create menu item')
+      toast.error(error.message || 'Failed to create menu item')
     } finally {
       setLoading(false)
     }

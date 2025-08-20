@@ -1,9 +1,9 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
 import { Category, MenuItem } from '@/types'
 import { Edit, FolderPlus, Plus, Trash2, Utensils } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
@@ -18,19 +18,25 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      const [menuItemsResponse, categoriesResponse] = await Promise.all([
-        supabase.from('menu_items').select('*').order('name'),
-        supabase.from('categories').select('*').order('name')
+      setLoading(true)
+      const [menuItemsRes, categoriesRes] = await Promise.all([
+        fetch('/api/admin/menu-items'),
+        fetch('/api/admin/categories')
       ])
 
-      if (menuItemsResponse.error) throw menuItemsResponse.error
-      if (categoriesResponse.error) throw categoriesResponse.error
+      if (!menuItemsRes.ok) throw new Error('Failed to fetch menu items')
+      if (!categoriesRes.ok) throw new Error('Failed to fetch categories')
 
-      setMenuItems(menuItemsResponse.data || [])
-      setCategories(categoriesResponse.data || [])
+      const [menuItemsData, categoriesData] = await Promise.all([
+        menuItemsRes.json(),
+        categoriesRes.json()
+      ])
+
+      setMenuItems(menuItemsData || [])
+      setCategories(categoriesData || [])
     } catch (error) {
       console.error('Error fetching data:', error)
-      toast.error('Failed to fetch data')
+      toast.error('Failed to fetch data. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -119,14 +125,13 @@ export default function AdminDashboard() {
                     onClick={async () => {
                       if (confirm('Are you sure you want to delete this item?')) {
                         try {
-                          const { error } = await supabase
-                            .from('menu_items')
-                            .delete()
-                            .eq('id', item.id)
+                          const response = await fetch(`/api/admin/menu-items/${item.id}`, {
+                            method: 'DELETE'
+                          })
 
-                          if (error) throw error
+                          if (!response.ok) throw new Error('Failed to delete menu item')
 
-                          toast.success('Menu item deleted successfully')
+                          toast.success('Menu item deleted')
                           fetchData()
                         } catch (error) {
                           console.error('Error deleting menu item:', error)
@@ -177,18 +182,20 @@ export default function AdminDashboard() {
                     onClick={async () => {
                       if (confirm('Are you sure you want to delete this category?')) {
                         try {
-                          const { error } = await supabase
-                            .from('categories')
-                            .delete()
-                            .eq('id', category.id)
+                          const response = await fetch(`/api/admin/categories/${category.id}`, {
+                            method: 'DELETE'
+                          })
 
-                          if (error) throw error
+                          if (!response.ok) {
+                            const error = await response.json()
+                            throw new Error(error.message || 'Failed to delete category')
+                          }
 
-                          toast.success('Category deleted successfully')
+                          toast.success('Category deleted')
                           fetchData()
-                        } catch (error) {
+                        } catch (error: any) {
                           console.error('Error deleting category:', error)
-                          toast.error('Failed to delete category')
+                          toast.error(error.message || 'Failed to delete category. Make sure no menu items are using it.')
                         }
                       }
                     }}

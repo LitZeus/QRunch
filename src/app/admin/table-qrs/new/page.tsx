@@ -1,6 +1,5 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
 import { ArrowLeft, QrCode } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -21,25 +20,27 @@ export default function NewTablePage() {
     setLoading(true)
 
     try {
-      const { error } = await supabase
-        .from('tables')
-        .insert([{
+      const response = await fetch('/api/admin/table-qrs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           ...formData,
           capacity: parseInt(formData.capacity),
-        }])
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to add table')
+      }
 
       toast.success('Table added successfully!')
       router.push('/admin/table-qrs')
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        toast.error(error.message || 'Error adding table')
-        console.error('Error:', error.message)
-      } else {
-        toast.error('Error adding table')
-        console.error('Error:', error)
-      }
+    } catch (error: any) {
+      console.error('Error adding table:', error)
+      toast.error(error.message || 'Error adding table')
     } finally {
       setLoading(false)
     }

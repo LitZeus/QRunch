@@ -1,6 +1,5 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
 import { Category } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -24,13 +23,11 @@ export default function EditCategory({ params }: { params: Promise<PageParams> }
 
   const fetchCategory = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('id', resolvedParams.id)
-        .single()
-
-      if (error) throw error
+      const response = await fetch(`/api/admin/categories/${resolvedParams.id}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch category')
+      }
+      const data = await response.json()
 
       setCategory(data)
       setFormData({
@@ -54,21 +51,27 @@ export default function EditCategory({ params }: { params: Promise<PageParams> }
     setLoading(true)
 
     try {
-      const { error } = await supabase
-        .from('categories')
-        .update({
+      const response = await fetch(`/api/admin/categories/${resolvedParams.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           name: formData.name,
           description: formData.description
-        })
-        .eq('id', resolvedParams.id)
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to update category')
+      }
 
       toast.success('Category updated successfully')
       router.push('/admin/categories')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating category:', error)
-      toast.error('Failed to update category')
+      toast.error(error.message || 'Failed to update category')
     } finally {
       setLoading(false)
     }

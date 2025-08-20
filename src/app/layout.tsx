@@ -1,5 +1,6 @@
 'use client'
 
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
 import { AnimatePresence } from 'framer-motion'
 import { Inter, Playfair_Display } from 'next/font/google'
@@ -16,10 +17,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="font-inter">
-        <ServiceWorkerRegistration />
-        <AnimatePresence mode="wait">
-          {children}
-        </AnimatePresence>
+        <ErrorBoundary>
+          <ServiceWorkerRegistration />
+          <AnimatePresence mode="wait">
+            {children}
+          </AnimatePresence>
+        </ErrorBoundary>
       </body>
     </html>
   )

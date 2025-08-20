@@ -1,9 +1,9 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
-import { Category } from '@/types'
+import { Category } from '@/lib/models'
 import { ChevronRight, Edit, Home, Plus, Search, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
@@ -11,6 +11,7 @@ export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     fetchCategories()
@@ -18,13 +19,10 @@ export default function Categories() {
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      setCategories(data || [])
+      const response = await fetch('/api/admin/categories')
+      if (!response.ok) throw new Error('Failed to fetch categories')
+      const data = await response.json()
+      setCategories(data)
     } catch (error) {
       console.error('Error fetching categories:', error)
       toast.error('Failed to fetch categories')
@@ -37,13 +35,12 @@ export default function Categories() {
     if (!confirm('Are you sure you want to delete this category?')) return
 
     try {
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
+      const response = await fetch(`/api/admin/categories/${id}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) throw new Error('Failed to delete category')
+      
       setCategories(prev => prev.filter(category => category.id !== id))
       toast.success('Category deleted successfully')
     } catch (error) {

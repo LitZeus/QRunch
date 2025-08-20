@@ -1,8 +1,7 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
 import { Category, MenuItem } from '@/types'
-import { ArrowLeft, ArrowUpDown, ChevronDown, ChevronUp, Filter, Heart, Share2, Trash2, ChevronUp as UpIcon, Utensils } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, ChevronDown, ChevronUp, Filter, Heart, Share2, ChevronUp as UpIcon, Utensils, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
@@ -46,25 +45,25 @@ export default function Menu() {
     const fetchData = async () => {
       try {
         setLoading(true)
-        // Fetch categories
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('categories')
-          .select('*')
-          .order('name')
+        // Fetch categories and menu items in parallel
+        const [categoriesRes, menuItemsRes] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/menu-items')
+        ])
 
-        if (categoriesError) throw categoriesError
-        setCategories(categoriesData || [])
+        if (!categoriesRes.ok || !menuItemsRes.ok) {
+          throw new Error('Failed to fetch data')
+        }
 
-        // Fetch menu items
-        const { data: menuItemsData, error: menuItemsError } = await supabase
-          .from('menu_items')
-          .select('*, categories(name)')
-          .order('name')
+        const [categoriesData, menuItemsData] = await Promise.all([
+          categoriesRes.json(),
+          menuItemsRes.json()
+        ])
 
-        if (menuItemsError) throw menuItemsError
-        setMenuItems(menuItemsData || [])
-      } catch (err) {
-        console.error('Error fetching data:', err instanceof Error ? err.message : String(err))
+        setCategories(categoriesData)
+        setMenuItems(menuItemsData)
+      } catch (error) {
+        console.error('Error fetching data:', error)
       } finally {
         setLoading(false)
       }
@@ -90,15 +89,43 @@ export default function Menu() {
     }
   }, [])
 
-  // Filter and sort menu items
-  const filteredMenuItems = menuItems
-    .filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category_id)
-      const matchesPrice = item.price >= priceRange.min && item.price <= priceRange.max
-      return matchesSearch && matchesCategory && matchesPrice
-    })
-    .sort((a, b) => {
+  // Filter menu items by search query and selected categories
+  const filteredItems = menuItems.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    
+    const matchesCategory = selectedCategories.length === 0 || 
+      (item.category_id && selectedCategories.includes(item.category_id.toString()))
+    
+    const matchesPrice = item.price >= priceRange.min && item.price <= priceRange.max
+    
+    return matchesSearch && matchesCategory && matchesPrice
+  })
+
+  // Group items by category
+  const itemsByCategory = filteredItems.reduce<Record<string, MenuItem[]>>((acc, item) => {
+    if (!item.category_id) {
+      if (!acc['Uncategorized']) {
+        acc['Uncategorized'] = []
+      }
+      acc['Uncategorized'].push(item)
+      return acc
+    }
+    
+    const category = categories.find(cat => cat.id === item.category_id)
+    const categoryName = category?.name || 'Uncategorized'
+    
+    if (!acc[categoryName]) {
+      acc[categoryName] = []
+    }
+    acc[categoryName].push(item)
+    return acc
+  }, {})
+
+  // Sort items by name or price
+  const sortedItems = Object.keys(itemsByCategory).map(category => ({
+    category,
+    items: itemsByCategory[category].sort((a, b) => {
       if (sortBy === 'name') {
         return sortOrder === 'asc' 
           ? a.name.localeCompare(b.name)
@@ -109,6 +136,7 @@ export default function Menu() {
           : b.price - a.price
       }
     })
+  }))
 
   // Toggle category with simple animation
   const toggleCategory = (categoryId: string) => {
@@ -411,9 +439,9 @@ export default function Menu() {
                       }`}
                     >
                       <div className="pl-3 sm:pl-4 space-y-2">
-                        {filteredMenuItems
-                          .filter(item => item.category_id === category.id)
-                          .map(item => (
+                        {filteredItems
+                          .filter((item: MenuItem) => item.category_id === category.id)
+                          .map((item: MenuItem) => (
                             <div
                               key={item.id}
                               className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 rounded-lg hover:bg-[#F0E6D2] transition-colors"

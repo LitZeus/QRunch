@@ -1,6 +1,5 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
 import { Category, MenuItem } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -32,13 +31,11 @@ export default function EditMenuItem({ params }: { params: Promise<PageParams> }
 
   const fetchMenuItem = async () => {
     try {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('id', resolvedParams.id)
-        .single()
-
-      if (error) throw error
+      const response = await fetch(`/api/admin/menu-items/${resolvedParams.id}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch menu item')
+      }
+      const data = await response.json()
 
       setMenuItem(data)
       setFormData({
@@ -57,12 +54,11 @@ export default function EditMenuItem({ params }: { params: Promise<PageParams> }
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
+      const response = await fetch('/api/admin/categories')
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories')
+      }
+      const data = await response.json()
       setCategories(data || [])
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -75,23 +71,29 @@ export default function EditMenuItem({ params }: { params: Promise<PageParams> }
     setLoading(true)
 
     try {
-      const { error } = await supabase
-        .from('menu_items')
-        .update({
+      const response = await fetch(`/api/admin/menu-items/${resolvedParams.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           name: formData.name,
           description: formData.description,
           price: parseFloat(formData.price),
           category_id: formData.category_id
-        })
-        .eq('id', resolvedParams.id)
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to update menu item')
+      }
 
       toast.success('Menu item updated successfully')
       router.push('/admin/menu-items')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating menu item:', error)
-      toast.error('Failed to update menu item')
+      toast.error(error.message || 'Failed to update menu item')
     } finally {
       setLoading(false)
     }

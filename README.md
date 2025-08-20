@@ -1,6 +1,6 @@
-# The Grand Plate - Digital Menu
+# QRunch - Digital Menu
 
-A modern, responsive digital menu application for restaurants and cafes. Built with Next.js, TypeScript, and Supabase.
+A modern, responsive digital menu application for restaurants and cafes. Built with Next.js, TypeScript, and Neon DB with NextAuth for authentication.
 
 ## Features
 
@@ -16,7 +16,8 @@ A modern, responsive digital menu application for restaurants and cafes. Built w
 - Next.js 14
 - TypeScript
 - Tailwind CSS
-- Supabase
+- Neon DB (PostgreSQL)
+- NextAuth.js
 - React Icons
 - Framer Motion
 
@@ -26,7 +27,7 @@ A modern, responsive digital menu application for restaurants and cafes. Built w
 
 - Node.js 18+ 
 - npm or yarn
-- Supabase account
+- Neon DB account (or any PostgreSQL database)
 
 ### Installation
 
@@ -43,10 +44,18 @@ npm install
 yarn install
 ```
 
-3. Create a `.env.local` file in the root directory and add your Supabase credentials:
+3. Create a `.env.local` file in the root directory and add your database credentials:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+DATABASE_URL=your_neon_db_connection_string
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_secure_secret_here
+```
+
+4. Initialize the database:
+```bash
+npm run db:init
+# or
+yarn db:init
 ```
 
 4. Run the development server:
@@ -71,8 +80,18 @@ This project is configured for deployment on Vercel:
 
 Required environment variables:
 
-- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+- `DATABASE_URL`: Your Neon DB connection string
+- `NEXTAUTH_URL`: Your application URL (e.g., http://localhost:3000)
+- `NEXTAUTH_SECRET`: A secure random string for session encryption
+
+## Database Setup
+
+1. Create a new database in Neon DB (https://neon.tech/)
+2. Run the initialization script to create the required tables:
+   ```bash
+   npm run db:init
+   ```
+3. The script will create all necessary tables and indexes
 
 ## Contributing
 

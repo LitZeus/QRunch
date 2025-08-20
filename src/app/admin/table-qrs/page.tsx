@@ -1,9 +1,10 @@
 'use client'
 
-import { TableQR, supabase } from '@/lib/supabase'
+import { TableQR } from '@/lib/models'
 import { Edit, Plus, QrCode, Search, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
@@ -11,6 +12,7 @@ export default function TableQRsPage() {
   const [tableQRs, setTableQRs] = useState<TableQR[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     fetchTableQRs()
@@ -18,13 +20,10 @@ export default function TableQRsPage() {
 
   const fetchTableQRs = async () => {
     try {
-      const { data, error } = await supabase
-        .from('table_qrs')
-        .select('*')
-        .order('table_number')
-
-      if (error) throw error
-      setTableQRs(data || [])
+      const response = await fetch('/api/admin/table-qrs')
+      if (!response.ok) throw new Error('Failed to fetch table QR codes')
+      const data = await response.json()
+      setTableQRs(data)
     } catch (error) {
       console.error('Error fetching table QR codes:', error)
       toast.error('Failed to fetch table QR codes')
@@ -37,13 +36,12 @@ export default function TableQRsPage() {
     if (!confirm('Are you sure you want to delete this table QR code?')) return
 
     try {
-      const { error } = await supabase
-        .from('table_qrs')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
+      const response = await fetch(`/api/admin/table-qrs/${id}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) throw new Error('Failed to delete table QR code')
+      
       setTableQRs(tableQRs.filter((qr) => qr.id !== id))
       toast.success('Table QR code deleted successfully')
     } catch (error) {

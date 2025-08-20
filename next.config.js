@@ -4,10 +4,8 @@ const nextConfig = {
     domains: [
       'example.com',
       'images.unsplash.com',
-      'supabase.co',
       'localhost',
-      '127.0.0.1',
-      '*.supabase.co'
+      '127.0.0.1'
     ],
     remotePatterns: [
       {

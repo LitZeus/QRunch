@@ -1,6 +1,5 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -18,17 +17,24 @@ export default function NewCategory() {
     setLoading(true)
 
     try {
-      const { error } = await supabase
-        .from('categories')
-        .insert([{ name, description }])
+      const response = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, description }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to create category')
+      }
 
       toast.success('Category created successfully')
       router.push('/admin/categories')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating category:', error)
-      toast.error('Failed to create category')
+      toast.error(error.message || 'Failed to create category')
     } finally {
       setLoading(false)
     }

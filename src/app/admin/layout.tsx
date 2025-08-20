@@ -1,9 +1,9 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
+import { signOut } from 'next-auth/react'
 import { FolderPlus, LogOut, Menu, Settings, Utensils, X } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export default function AdminLayout({
@@ -75,8 +75,8 @@ export default function AdminLayout({
           {/* Logout Button */}
           <div className="p-4 border-t border-[#E8D5B5]">
             <button
-              onClick={() => {
-                supabase.auth.signOut()
+              onClick={async () => {
+                await signOut({ redirect: false })
                 window.location.href = '/login'
               }}
               className="flex items-center w-full px-4 py-3 text-sm font-inter text-[#4A6B57] rounded-lg hover:bg-[#F0E6D2]/50 transition-colors duration-200"
@@ -129,8 +129,8 @@ export default function AdminLayout({
           {/* Logout Button */}
           <div className="p-4 border-t border-[#E8D5B5]">
             <button
-              onClick={() => {
-                supabase.auth.signOut()
+              onClick={async () => {
+                await signOut({ redirect: false })
                 window.location.href = '/login'
               }}
               className="flex items-center w-full px-4 py-3 text-base font-inter text-[#4A6B57] rounded-lg hover:bg-[#F0E6D2]/50"
