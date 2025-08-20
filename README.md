@@ -33,15 +33,13 @@ A modern, responsive digital menu application for restaurants and cafes. Built w
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/the-grand-plate.git
-cd the-grand-plate
+git clone https://github.com/yourusername/QRunch.git
+cd QRunch
 ```
 
 2. Install dependencies:
 ```bash
 npm install
-# or
-yarn install
 ```
 
 3. Create a `.env.local` file in the root directory and add your database credentials:
@@ -61,8 +59,6 @@ yarn db:init
 4. Run the development server:
 ```bash
 npm run dev
-# or
-yarn dev
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -79,19 +75,6 @@ This project is configured for deployment on Vercel:
 ## Environment Variables
 
 Required environment variables:
-
-- `DATABASE_URL`: Your Neon DB connection string
-- `NEXTAUTH_URL`: Your application URL (e.g., http://localhost:3000)
-- `NEXTAUTH_SECRET`: A secure random string for session encryption
-
-## Database Setup
-
-1. Create a new database in Neon DB (https://neon.tech/)
-2. Run the initialization script to create the required tables:
-   ```bash
-   npm run db:init
-   ```
-3. The script will create all necessary tables and indexes
 
 ## Contributing
 
