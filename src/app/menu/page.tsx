@@ -1,24 +1,56 @@
 'use client'
 
-import { Category, MenuItem } from '@/types'
+import { Category, MenuItem, MenuFilters, MenuState } from '@/types'
 import { ArrowLeft, ArrowUpDown, ChevronDown, ChevronUp, Filter, Heart, Share2, ChevronUp as UpIcon, Utensils, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
 export default function Menu() {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showBackToTop, setShowBackToTop] = useState(false)
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
-  const [wishlist, setWishlist] = useState<MenuItem[]>([])
-  const [showWishlist, setShowWishlist] = useState(false)
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 })
-  const [sortBy, setSortBy] = useState<'name' | 'price'>('name')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
-  const [showFilters, setShowFilters] = useState(false)
+  // State for UI and data
+  const [uiState, setUiState] = useState({
+    showWishlist: false,
+    showFilters: false,
+    showBackToTop: false,
+    expandedCategories: {} as Record<string, boolean>
+  });
+
+  // State for data
+  const [state, setState] = useState<MenuState>({
+    menuItems: [],
+    categories: [],
+    wishlist: [],
+    loading: true,
+    error: null,
+    filters: {
+      searchQuery: '',
+      selectedCategories: [] as string[],
+      priceRange: [0, 100] as [number, number],
+      sortBy: 'name' as 'name' | 'price',
+      sortOrder: 'asc' as 'asc' | 'desc'
+    }
+  });
+
+  // Price range state for filters
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 100 });
+
+  // Destructure state for easier access
+  const { 
+    menuItems, 
+    categories, 
+    wishlist, 
+    loading, 
+    error, 
+    filters: { 
+      searchQuery, 
+      selectedCategories, 
+      priceRange: filterPriceRange, 
+      sortBy, 
+      sortOrder 
+    } 
+  } = state;
+  
+  const { showWishlist, showFilters, showBackToTop, expandedCategories } = uiState;
+  
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Sort categories by predefined order
@@ -39,38 +71,65 @@ export default function Menu() {
     if (orderB === -1) return -1
     return orderA - orderB
   })
+  
+  console.log('Sorted categories:', sortedCategories);
 
   // Fetch categories and menu items
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true)
+        setState(prev => ({ ...prev, loading: true }));
+        
+        console.log('Fetching data...');
         // Fetch categories and menu items in parallel
         const [categoriesRes, menuItemsRes] = await Promise.all([
-          fetch('/api/categories'),
-          fetch('/api/menu-items')
-        ])
+          fetch('/api/categories', { next: { revalidate: 60 } }),
+          fetch('/api/menu-items', { next: { revalidate: 60 } })
+        ]);
+        
+        console.log('Categories status:', categoriesRes.status);
+        console.log('Menu items status:', menuItemsRes.status);
 
         if (!categoriesRes.ok || !menuItemsRes.ok) {
-          throw new Error('Failed to fetch data')
+          const errorText = await Promise.all([
+            categoriesRes.text().catch(() => 'Unknown error'),
+            menuItemsRes.text().catch(() => 'Unknown error')
+          ]);
+          throw new Error(`Failed to fetch data: Categories - ${errorText[0]}, Menu Items - ${errorText[1]}`);
         }
 
         const [categoriesData, menuItemsData] = await Promise.all([
           categoriesRes.json(),
           menuItemsRes.json()
-        ])
+        ]);
+        
+        console.log('Categories data:', categoriesData);
+        console.log('Menu items data:', menuItemsData);
 
-        setCategories(categoriesData)
-        setMenuItems(menuItemsData)
+        // Ensure we have valid data
+        if (!Array.isArray(categoriesData) || !Array.isArray(menuItemsData)) {
+          throw new Error('Invalid data format received from server');
+        }
+
+        setState(prev => ({
+          ...prev,
+          menuItems: menuItemsData,
+          categories: categoriesData,
+          loading: false,
+          error: null
+        }));
       } catch (error) {
-        console.error('Error fetching data:', error)
-      } finally {
-        setLoading(false)
+        console.error('Error fetching data:', error);
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Failed to fetch data'
+        }));
       }
-    }
+    };
 
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   useEffect(() => {
     document.title = 'Menu - Verandah'
@@ -78,54 +137,80 @@ export default function Menu() {
 
   // Save wishlist to localStorage
   useEffect(() => {
-    localStorage.setItem('wishlist', JSON.stringify(wishlist))
-  }, [wishlist])
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    }
+  }, [wishlist]);
 
   // Load wishlist from localStorage
   useEffect(() => {
-    const savedWishlist = localStorage.getItem('wishlist')
-    if (savedWishlist) {
-      setWishlist(JSON.parse(savedWishlist))
+    if (typeof window !== 'undefined') {
+      const savedWishlist = localStorage.getItem('wishlist');
+      if (savedWishlist) {
+        try {
+          const parsedWishlist = JSON.parse(savedWishlist);
+          if (Array.isArray(parsedWishlist)) {
+            setState(prev => ({
+              ...prev,
+              wishlist: parsedWishlist
+            }));
+          }
+        } catch (error) {
+          console.error('Error parsing wishlist from localStorage:', error);
+        }
+      }
     }
-  }, [])
+  }, []);
+
+  // Update price range when menu items change
+  useEffect(() => {
+    if (menuItems.length > 0) {
+      const prices = menuItems.map(item => item.price);
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      setState(prev => ({
+        ...prev,
+        filters: {
+          ...prev.filters,
+          priceRange: [minPrice, maxPrice] as [number, number]
+        }
+      }));
+      setPriceRange({ min: minPrice, max: maxPrice });
+    }
+  }, [menuItems]);
 
   // Filter menu items by search query and selected categories
-  const filteredItems = menuItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredMenuItems = menuItems.filter(item => {
+    if (!item.is_available) return false;
+    
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = item.name.toLowerCase().includes(searchLower) ||
+      (item.description && item.description.toLowerCase().includes(searchLower));
     
     const matchesCategory = selectedCategories.length === 0 || 
-      (item.category_id && selectedCategories.includes(item.category_id.toString()))
+      (item.category_id && selectedCategories.includes(item.category_id));
     
-    const matchesPrice = item.price >= priceRange.min && item.price <= priceRange.max
+    const matchesPrice = item.price >= filterPriceRange[0] && item.price <= filterPriceRange[1];
     
     return matchesSearch && matchesCategory && matchesPrice
   })
 
-  // Group items by category
-  const itemsByCategory = filteredItems.reduce<Record<string, MenuItem[]>>((acc, item) => {
-    if (!item.category_id) {
-      if (!acc['Uncategorized']) {
-        acc['Uncategorized'] = []
-      }
-      acc['Uncategorized'].push(item)
-      return acc
-    }
-    
-    const category = categories.find(cat => cat.id === item.category_id)
-    const categoryName = category?.name || 'Uncategorized'
-    
-    if (!acc[categoryName]) {
-      acc[categoryName] = []
-    }
-    acc[categoryName].push(item)
-    return acc
-  }, {})
+  // Group menu items by category
+  const menuByCategory = categories
+    .map(category => ({
+      id: category.id,
+      name: category.name,
+      items: filteredMenuItems
+        .filter(item => item.category_id === category.id)
+        .sort((a, b) => a.name.localeCompare(b.name))
+    }))
+    .filter(category => category.items.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Sort items by name or price
-  const sortedItems = Object.keys(itemsByCategory).map(category => ({
-    category,
-    items: itemsByCategory[category].sort((a, b) => {
+  const sortedMenuItems = menuByCategory.map(category => ({
+    ...category,
+    items: category.items.sort((a, b) => {
       if (sortBy === 'name') {
         return sortOrder === 'asc' 
           ? a.name.localeCompare(b.name)
@@ -136,34 +221,68 @@ export default function Menu() {
           : b.price - a.price
       }
     })
-  }))
+  })).sort((a, b) => {
+    if (sortBy === 'name') {
+      return sortOrder === 'asc' 
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name)
+    } else {
+      return sortOrder === 'asc' 
+        ? (a.items[0] ? a.items[0].price : Infinity) - (b.items[0] ? b.items[0].price : Infinity)
+        : (b.items[0] ? b.items[0].price : -Infinity) - (a.items[0] ? a.items[0].price : -Infinity)
+    }
+  })
 
-  // Toggle category with simple animation
+  // Toggle category expansion
   const toggleCategory = (categoryId: string) => {
-    setExpandedCategories(prev => ({
+    setUiState(prev => ({
       ...prev,
-      [categoryId]: !prev[categoryId]
-    }))
-  }
+      expandedCategories: {
+        ...prev.expandedCategories,
+        [categoryId]: !prev.expandedCategories[categoryId]
+      }
+    }));
+  };
+
+  // Handle category toggle in filters
+  const handleCategoryToggle = (categoryId: string) => {
+    setState(prev => ({
+      ...prev,
+      filters: {
+        ...prev.filters,
+        selectedCategories: prev.filters.selectedCategories.includes(categoryId)
+          ? prev.filters.selectedCategories.filter((id: string) => id !== categoryId)
+          : [...prev.filters.selectedCategories, categoryId]
+      }
+    }));
+  };
 
   // Toggle wishlist with simple animation
   const toggleWishlist = (item: MenuItem) => {
-    setWishlist(prev => {
-      const isInWishlist = prev.some(i => i.id === item.id)
-      return isInWishlist
-        ? prev.filter(i => i.id !== item.id)
-        : [...prev, item]
-    })
+    setState(prev => {
+      const isInWishlist = prev.wishlist.some(i => i.id === item.id);
+      const newWishlist = isInWishlist
+        ? prev.wishlist.filter(i => i.id !== item.id)
+        : [...prev.wishlist, item];
+      
+      return {
+        ...prev,
+        wishlist: newWishlist
+      };
+    });
   }
 
   // Clear wishlist
   const clearWishlist = () => {
-    setWishlist([])
+    setState(prev => ({
+      ...prev,
+      wishlist: []
+    }));
   }
 
   // Share wishlist
   const shareWishlist = async () => {
-    const wishlistText = wishlist.map(item => `${item.name} - ₹${item.price}`).join('\n')
+    const wishlistText = wishlist.map(item => `${item.name} - ₹${item.price}`).join('\n');
     const shareData = {
       title: 'My Verandah Wishlist',
       text: wishlistText,
@@ -198,16 +317,27 @@ export default function Menu() {
     }
   }
 
+  // Toggle wishlist visibility
+  const toggleWishlistVisibility = () => {
+    setUiState(prev => ({
+      ...prev,
+      showWishlist: !prev.showWishlist
+    }));
+  };
+
   // Handle scroll to top
   const handleScrollToTop = () => {
-    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // Show/hide back to top button
   useEffect(() => {
     const handleScroll = () => {
       if (scrollRef.current) {
-        setShowBackToTop(scrollRef.current.scrollTop > 300)
+        setUiState(prev => ({
+          ...prev,
+          showBackToTop: scrollRef.current!.scrollTop > 300
+        }));
       }
     }
 
@@ -215,6 +345,50 @@ export default function Menu() {
     currentRef?.addEventListener('scroll', handleScroll)
     return () => currentRef?.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setState(prev => ({
+      ...prev,
+      filters: {
+        ...prev.filters,
+        searchQuery: e.target.value
+      }
+    }));
+  };
+
+  // Toggle filters
+  const toggleFilters = () => {
+    setUiState(prev => ({
+      ...prev,
+      showFilters: !prev.showFilters
+    }));
+  };
+
+  // Handle price range change
+  const handlePriceChange = (values: [number, number]) => {
+    setState(prev => ({
+      ...prev,
+      filters: {
+        ...prev.filters,
+        priceRange: values
+      }
+    }));
+  };
+
+  // Handle sort change
+  const handleSortChange = (type: 'name' | 'price') => {
+    setState(prev => ({
+      ...prev,
+      filters: {
+        ...prev.filters,
+        sortBy: type,
+        sortOrder: prev.filters.sortBy === type 
+          ? prev.filters.sortOrder === 'asc' ? 'desc' : 'asc'
+          : 'asc'
+      }
+    }));
+  };
 
   if (loading) {
     return (
@@ -225,7 +399,7 @@ export default function Menu() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div ref={scrollRef} className="min-h-screen bg-[#F5F5F5] overflow-y-auto">
       {/* Header */}
       <div className="bg-[#4A6B57] shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
@@ -237,7 +411,7 @@ export default function Menu() {
               Verandah
             </Link>
             <button
-              onClick={() => setShowWishlist(!showWishlist)}
+              onClick={toggleWishlistVisibility}
               className="mt-4 flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white/90 backdrop-blur-sm text-[#4A6B57] hover:bg-white transition-colors text-sm sm:text-base"
             >
               <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${wishlist.length > 0 ? 'text-red-500 fill-red-500' : 'text-[#4A6B57]'}`} />
@@ -248,7 +422,7 @@ export default function Menu() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {showWishlist ? (
+        {uiState.showWishlist ? (
           <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className="text-lg sm:text-xl font-playfair font-semibold text-[#4A6B57]">Your Wishlist</h2>
@@ -268,7 +442,7 @@ export default function Menu() {
                   <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button
-                  onClick={() => setShowWishlist(false)}
+                  onClick={toggleWishlistVisibility}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -290,7 +464,7 @@ export default function Menu() {
                   >
                     <div>
                       <h3 className="text-sm sm:text-base font-medium text-[#4A6B57]">{item.name}</h3>
-                      <p className="text-xs sm:text-sm text-[#4A6B57]/70">{item.categories?.name}</p>
+                      <p className="text-xs sm:text-sm text-[#4A6B57]/70">{item.category?.name}</p>
                     </div>
                     <div className="flex items-center gap-3 sm:gap-4">
                       <span className="text-sm sm:text-base text-[#4A6B57] font-medium">₹{item.price}</span>
@@ -315,8 +489,8 @@ export default function Menu() {
                   <input
                     type="text"
                     placeholder="Search menu items..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={state.filters.searchQuery}
+                    onChange={handleSearchChange}
                     className="w-full px-4 py-2 pl-10 rounded-lg border border-[#E8D5B5] focus:outline-none focus:ring-2 focus:ring-[#4A6B57] focus:border-transparent text-sm sm:text-base text-[#4A6B57] placeholder-[#4A6B57]/50 bg-white"
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -337,7 +511,7 @@ export default function Menu() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
                     <button
-                      onClick={() => setShowFilters(!showFilters)}
+                      onClick={() => setUiState(prev => ({ ...prev, showFilters: !prev.showFilters }))}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors w-full sm:w-auto"
                     >
                       <Filter className="w-4 h-4" />
@@ -345,22 +519,38 @@ export default function Menu() {
                     </button>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as 'name' | 'price')}
-                      className="px-3 py-2 rounded-lg border border-[#E8D5B5] bg-white text-[#4A6B57] focus:outline-none text-sm"
-                    >
-                      <option value="name">Sort by Name</option>
-                      <option value="price">Sort by Price</option>
-                    </select>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => {
+                          setState(prev => ({
+                            ...prev,
+                            filters: {
+                              ...prev.filters,
+                              sortBy: e.target.value as 'name' | 'price'
+                            }
+                          }));
+                        }}
+                        className="px-3 py-2 rounded-lg border border-[#E8D5B5] bg-white text-[#4A6B57] focus:outline-none text-sm"
+                      >
+                        <option value="name">Sort by Name</option>
+                        <option value="price">Sort by Price</option>
+                      </select>
 
-                    <button
-                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                      className="p-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors"
-                      title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
-                    >
-                      <ArrowUpDown className="w-4 h-4" />
-                    </button>
+                      <button
+                        onClick={() => {
+                          setState(prev => ({
+                            ...prev,
+                            filters: {
+                              ...prev.filters,
+                              sortOrder: prev.filters.sortOrder === 'asc' ? 'desc' : 'asc'
+                            }
+                          }));
+                        }}
+                        className="p-2 rounded-lg bg-[#F0E6D2] text-[#4A6B57] hover:bg-[#E8D9B5] transition-colors"
+                        title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -369,25 +559,30 @@ export default function Menu() {
                   <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#F0E6D2] rounded-lg">
                     <div className="space-y-3">
                       <h3 className="text-sm font-medium text-[#4A6B57]">Categories</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {categories.map(category => (
-                          <button
-                            key={category.id}
-                            onClick={() => {
-                              setSelectedCategories(prev =>
-                                prev.includes(category.id)
-                                  ? prev.filter(id => id !== category.id)
-                                  : [...prev, category.id]
-                              )
-                            }}
-                            className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                              selectedCategories.includes(category.id)
-                                ? 'bg-[#4A6B57] text-white'
-                                : 'bg-white text-[#4A6B57] hover:bg-[#E8D9B5]'
-                            }`}
-                          >
-                            {category.name}
-                          </button>
+                      <div className="space-y-2">
+                        {categories.map((category) => (
+                          <div key={category.id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`cat-${category.id}`}
+                              checked={selectedCategories.includes(category.id)}
+                              onChange={() => {
+                                setState(prev => ({
+                                  ...prev,
+                                  filters: {
+                                    ...prev.filters,
+                                    selectedCategories: prev.filters.selectedCategories.includes(category.id)
+                                      ? prev.filters.selectedCategories.filter(id => id !== category.id)
+                                      : [...prev.filters.selectedCategories, category.id]
+                                  }
+                                }));
+                              }}
+                              className="h-4 w-4 rounded border-[#E8D5B5] text-[#4A6B57] focus:ring-[#4A6B57]"
+                            />
+                            <label htmlFor={`cat-${category.id}`} className="ml-2 text-sm text-[#4A6B57]">
+                              {category.name}
+                            </label>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -439,8 +634,8 @@ export default function Menu() {
                       }`}
                     >
                       <div className="pl-3 sm:pl-4 space-y-2">
-                        {filteredItems
-                          .filter((item: MenuItem) => item.category_id === category.id)
+                        {menuItems
+                          .filter((item: MenuItem) => item.category_id === category.id && item.is_available)
                           .map((item: MenuItem) => (
                             <div
                               key={item.id}
@@ -488,5 +683,5 @@ export default function Menu() {
         </button>
       )}
     </div>
-  )
+  );
 }

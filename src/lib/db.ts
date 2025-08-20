@@ -5,31 +5,59 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Create a connection pool with Neon configuration
+console.log('Connecting to database with URL:', process.env.DATABASE_URL ? 'Database URL is set' : 'DATABASE_URL is not set!');
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false, // Required for Neon's connection pooling
   },
-  max: 10, // Adjust based on your needs
+  max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // Increased from 2000 to 10000
+  query_timeout: 10000, // Add query timeout
+  statement_timeout: 10000, // Add statement timeout
 });
+
+// Test the connection on startup
+pool.query('SELECT NOW()')
+  .then(() => console.log('Database connection successful'))
+  .catch(err => console.error('Database connection error:', err));
 
 // Generic query function
 export async function query(text: string, params?: any[]) {
-  const client = await pool.connect();
+  const client = await pool.connect().catch(err => {
+    console.error('Error acquiring client from pool:', err);
+    throw new Error('Failed to get database connection');
+  });
+  
   try {
+    console.log('Executing query:', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
+    const start = Date.now();
     const res = await client.query(text, params);
+    const duration = Date.now() - start;
+    console.log(`Executed query in ${duration}ms`);
     return res;
+  } catch (err) {
+    console.error('Database query error:', {
+      query: text,
+      params,
+      error: err
+    });
+    throw err;
   } finally {
-    client.release();
+    try {
+      await client.release();
+    } catch (err) {
+      console.error('Error releasing client:', err);
+    }
   }
 }
 
 // Helper function to handle single row queries
 export async function queryRow<T>(text: string, params?: any[]): Promise<T | null> {
   const result = await query(text, params);
-  return result.rows[0] || null;
+  return result.rows?.[0] || null;
 }
 
 // Helper function to handle multiple rows
@@ -87,9 +115,11 @@ export async function remove(
   id: string,
   idColumn = 'id'
 ): Promise<boolean> {
-  const text = `DELETE FROM ${table} WHERE ${idColumn} = $1`;
-  const result = await query(text, [id]);
-  return result.rowCount > 0;
+  const result = await query(
+    `DELETE FROM ${table} WHERE ${idColumn} = $1 RETURNING *`,
+    [id]
+  );
+  return (result.rowCount ?? 0) > 0;
 }
 
 export default {
