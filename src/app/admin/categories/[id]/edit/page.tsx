@@ -4,43 +4,40 @@ import { Category } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { use, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
 interface PageParams {
   id: string
 }
 
-export default function EditCategory({ params }: { params: Promise<PageParams> }) {
+export default function EditCategory({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const resolvedParams = use(params)
-  const [category, setCategory] = useState<Category | null>(null)
+    const [category, setCategory] = useState<Category | null>(null)
   const [loading, setLoading] = useState(true)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: ''
-  })
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
 
   const fetchCategory = useCallback(async () => {
+    if (!params.id) return
+
+    setLoading(true)
     try {
-      const response = await fetch(`/api/admin/categories/${resolvedParams.id}`)
+      const response = await fetch(`/api/admin/categories/${params.id}`)
       if (!response.ok) {
         throw new Error('Failed to fetch category')
       }
-      const data = await response.json()
-
+      const data: Category = await response.json()
       setCategory(data)
-      setFormData({
-        name: data.name,
-        description: data.description || ''
-      })
+      setName(data.name)
+      setDescription(data.description || '')
     } catch (error) {
       console.error('Error fetching category:', error)
-      toast.error('Failed to fetch category')
+      toast.error('Failed to load category data.')
     } finally {
       setLoading(false)
     }
-  }, [resolvedParams.id])
+  }, [params.id])
 
   useEffect(() => {
     fetchCategory()
@@ -51,14 +48,14 @@ export default function EditCategory({ params }: { params: Promise<PageParams> }
     setLoading(true)
 
     try {
-      const response = await fetch(`/api/admin/categories/${resolvedParams.id}`, {
+      const response = await fetch(`/api/admin/categories/${params.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name,
-          description: formData.description
+          name,
+          description
         }),
       })
 
@@ -127,8 +124,8 @@ export default function EditCategory({ params }: { params: Promise<PageParams> }
             <input
               type="text"
               id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               required
               className="mt-1 block w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
               placeholder="Enter category name"
@@ -141,8 +138,8 @@ export default function EditCategory({ params }: { params: Promise<PageParams> }
             </label>
             <textarea
               id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               rows={4}
               className="mt-1 block w-full px-4 py-2 text-sm font-inter text-[#4A6B57] bg-white border border-[#E8D5B5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A6B57]/20"
               placeholder="Enter category description"

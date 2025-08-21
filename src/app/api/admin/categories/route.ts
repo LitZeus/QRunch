@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { CategoryModel } from '@/lib/models';
+import { requireAdmin } from '@/lib/auth-utils';
 import { auth } from '@/lib/auth';
 
 // GET /api/admin/categories
-export async function GET() {
+export const GET = requireAdmin(async () => {
   try {
     const categories = await CategoryModel.findAll();
     return NextResponse.json(categories);
@@ -14,23 +15,16 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/admin/categories
-export async function POST(request: Request) {
+export const POST = requireAdmin(async (request: Request) => {
   try {
     const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const data = await request.json();
     const newCategory = await CategoryModel.create({
       ...data,
-      created_by: session.user.id,
+      created_by: session!.user!.id,
     });
 
     return NextResponse.json(newCategory, { status: 201 });
@@ -41,4 +35,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

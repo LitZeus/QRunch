@@ -1,6 +1,6 @@
 'use client'
 
-import { Category } from '@/lib/models'
+import { Category } from '@/types'
 import { ChevronRight, Edit, Home, Plus, Search, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'

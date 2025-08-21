@@ -59,7 +59,7 @@ export default function NewMenuItem() {
       }
 
       toast.success('Menu item created successfully!')
-      router.push('/admin')
+      router.push('/admin/menu-items')
     } catch (error: any) {
       console.error('Error creating menu item:', error)
       toast.error(error.message || 'Failed to create menu item')

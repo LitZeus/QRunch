@@ -1,83 +1,68 @@
-import { NextAuth } from 'next-auth';
+import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { compare } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { query } from './db';
+import { authConfig } from '../../auth.config';
+import type { User } from 'next-auth';
 
-export const auth = NextAuth({
+import type { NextAuthConfig } from 'next-auth';
+
+export const authOptions: NextAuthConfig = {
+  ...authConfig,
   providers: [
     CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password are required');
         }
 
-        const result = await query(
-          'SELECT * FROM users WHERE email = $1',
-          [credentials.email]
-        );
+        const userResult = await query('SELECT * FROM users WHERE email = $1', [
+          credentials.email as string,
+        ]);
 
-        const user = result.rows[0];
-        
+        let user = userResult.rows[0];
+
         if (!user) {
-          throw new Error('No user found with this email');
+          const countResult = await query('SELECT COUNT(*) FROM users');
+          const userCount = parseInt(countResult.rows[0].count, 10);
+
+          if (userCount === 0) {
+            const hashedPassword = await hash(credentials.password as string, 12);
+            const newUser = await query(
+              `INSERT INTO users (email, password_hash, role, created_at, updated_at)
+               VALUES ($1, $2, 'admin', NOW(), NOW())
+               RETURNING id, email, role`,
+              [credentials.email, hashedPassword]
+            );
+            user = newUser.rows[0];
+            return {
+              id: user.id,
+              email: user.email,
+              role: 'admin',
+            } as User;
+          } else {
+            return null; // Return null for failed auth
+          }
         }
 
-        const isValid = await compare(credentials.password, user.password_hash);
-        
+        const isValid = await compare(
+          credentials.password as string,
+          user.password_hash
+        );
+
         if (!isValid) {
-          throw new Error('Invalid password');
+          return null; // Return null for failed auth
         }
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role
-        };
-      }
-    })
+          role: user.role || 'user',
+        } as User;
+      },
+    }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-        token.id = user.id;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.role = token.role;
-        session.user.id = token.id;
-      }
-      return session;
-    }
-  },
-  pages: {
-    signIn: '/login',
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-  session: {
-    strategy: 'jwt',
-  },
-});
-
-export const requireAdmin = (handler: any) => {
-  return async (req: Request, ...args: any) => {
-    const session = await auth();
-    if (!session?.user || session.user.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-    }
-    return handler(req, ...args);
-  };
 };
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authOptions);

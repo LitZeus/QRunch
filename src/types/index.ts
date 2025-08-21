@@ -6,7 +6,7 @@ export interface BaseEntity {
 
 export interface MenuItem extends BaseEntity {
   name: string;
-  description: string;
+  description?: string;
   price: number;
   image_url: string | null;
   category_id: string;

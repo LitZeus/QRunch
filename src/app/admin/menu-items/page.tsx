@@ -1,6 +1,6 @@
 'use client'
 
-import { Category, MenuItem } from '@/lib/models'
+import { Category, MenuItem } from '@/types'
 import { ChevronRight, Edit, Home, Plus, Search, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -52,7 +52,7 @@ export default function MenuItems() {
     }
   }
 
-  const handleDeleteItem = async (id: string) => {
+  const handleDeleteMenuItem = async (id: string) => {
     if (!confirm('Are you sure you want to delete this menu item?')) return
 
     try {
@@ -220,7 +220,7 @@ export default function MenuItems() {
                         <Edit className="w-4 h-4 text-[#4A6B57]" />
                       </Link>
                       <button
-                        onClick={() => handleDeleteItem(item.id)}
+                        onClick={() => handleDeleteMenuItem(item.id)}
                         className="p-1.5 rounded-lg hover:bg-[#F0E6D2] transition-colors"
                         title="Delete"
                       >

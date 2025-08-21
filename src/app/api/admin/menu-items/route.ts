@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { MenuItemModel } from '@/lib/models';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth-utils';
 
 // GET /api/admin/menu-items
-export async function GET() {
+export const GET = requireAdmin(async () => {
   try {
     const menuItems = await MenuItemModel.findAll();
     return NextResponse.json(menuItems);
@@ -14,7 +14,7 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/admin/menu-items
 export const POST = requireAdmin(async (request: Request) => {

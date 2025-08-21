@@ -4,16 +4,11 @@ import { Category, MenuItem } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { use, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
-interface PageParams {
-  id: string
-}
-
-export default function EditMenuItem({ params }: { params: Promise<PageParams> }) {
+export default function EditMenuItem({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const resolvedParams = use(params)
   const [menuItem, setMenuItem] = useState<MenuItem | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -24,14 +19,23 @@ export default function EditMenuItem({ params }: { params: Promise<PageParams> }
     category_id: ''
   })
 
-  useEffect(() => {
-    fetchMenuItem()
-    fetchCategories()
-  }, [resolvedParams.id])
-
-  const fetchMenuItem = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
-      const response = await fetch(`/api/admin/menu-items/${resolvedParams.id}`)
+      const response = await fetch('/api/admin/categories')
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories')
+      }
+      const data = await response.json()
+      setCategories(data || [])
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      toast.error('Failed to fetch categories')
+    }
+  }, [])
+
+  const fetchMenuItem = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/menu-items/${id}`)
       if (!response.ok) {
         throw new Error('Failed to fetch menu item')
       }
@@ -50,28 +54,20 @@ export default function EditMenuItem({ params }: { params: Promise<PageParams> }
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/admin/categories')
-      if (!response.ok) {
-        throw new Error('Failed to fetch categories')
-      }
-      const data = await response.json()
-      setCategories(data || [])
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-      toast.error('Failed to fetch categories')
-    }
-  }
+  useEffect(() => {
+    fetchMenuItem(params.id)
+    fetchCategories()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const response = await fetch(`/api/admin/menu-items/${resolvedParams.id}`, {
+      const response = await fetch(`/api/admin/menu-items/${params.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
